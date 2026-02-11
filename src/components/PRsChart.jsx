@@ -6,20 +6,20 @@ export default function PRsChart({ data }) {
 
   return (
     <ChartCard title="Pull Requests Over Time">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={250}>
         <AreaChart data={chartData}>
           <XAxis
             dataKey="date"
-            tick={{ fill: '#9CA3AF', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 12 }}
             tickFormatter={(val) => val.slice(5)}
           />
           <YAxis
-            tick={{ fill: '#9CA3AF', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 12 }}
             tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
           />
           <Tooltip
-            contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-            labelStyle={{ color: '#9CA3AF' }}
+            contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+            labelStyle={{ color: '#374151' }}
           />
           <Legend />
           <Area

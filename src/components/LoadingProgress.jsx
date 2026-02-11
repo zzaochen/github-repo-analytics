@@ -1,40 +1,22 @@
 export default function LoadingProgress({ progress }) {
-  const items = [
-    { key: 'stars', label: 'Stars' },
-    { key: 'forks', label: 'Forks' },
-    { key: 'issues', label: 'Issues' },
-    { key: 'prs', label: 'Pull Requests' },
-    { key: 'commits', label: 'Commits' }
-  ];
-
   return (
-    <div className="bg-gray-800 rounded-lg p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4">Fetching Repository Data...</h3>
-      <div className="space-y-3">
-        {items.map(({ key, label }) => (
-          <div key={key} className="flex items-center gap-3">
-            <div className="w-32 text-gray-400">{label}</div>
-            <div className="flex-1 bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: progress[key]?.done ? '100%' : '50%',
-                  opacity: progress[key]?.fetched > 0 ? 1 : 0.3
-                }}
-              />
-            </div>
-            <div className="w-20 text-right text-sm text-gray-400">
-              {progress[key]?.fetched || 0} fetched
-            </div>
-            {progress[key]?.done && (
-              <span className="text-green-500">✓</span>
-            )}
-          </div>
-        ))}
+    <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
+      <div className="flex items-center gap-3">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5 text-blue-500 animate-spin"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span className="text-gray-700 font-medium">Updating</span>
+        {progress.status && (
+          <span className="text-gray-500 text-sm">— {progress.status}</span>
+        )}
       </div>
-      {progress.status && (
-        <p className="mt-4 text-sm text-gray-400">{progress.status}</p>
-      )}
     </div>
   );
 }
