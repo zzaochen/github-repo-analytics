@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import RepoInput from './components/RepoInput';
 import LoadingProgress from './components/LoadingProgress';
 import Dashboard from './components/Dashboard';
 import CachedRepos from './components/CachedRepos';
 import TokenSettings from './components/TokenSettings';
+import CompareView from './components/CompareView';
+import BatchFetch from './components/BatchFetch';
+import RateLimitStatus from './components/RateLimitStatus';
 import {
   createGitHubClient,
   fetchRepoInfo,
@@ -19,7 +21,9 @@ import {
   saveRepoToCache,
   transformCachedMetrics,
   mergeDailyMetrics,
-  deleteRepoFromCache
+  deleteRepoFromCache,
+  backfillAllMonthlyMetrics,
+  getCachedRepos
 } from './services/supabase';
 import { aggregateToDaily } from './utils/dataAggregator';
 
@@ -34,8 +38,11 @@ function App() {
   const [cacheKey, setCacheKey] = useState(0);
   const [starsPaginationLimited, setStarsPaginationLimited] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeView, setActiveView] = useState('repoData');
   const [token, setToken] = useState('');
   const [saveToken, setSaveToken] = useState(true);
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState('');
 
   const TOKEN_KEY = 'github_analytics_token';
 
@@ -122,38 +129,28 @@ function App() {
         }));
       };
 
-      // Fetch stars using GraphQL (cursor-based pagination, no 1000-page limit)
+      // Prepare resume state parameters
       const starsCursor = resumeState?.stars?.cursor || null;
-      setProgress(prev => ({ ...prev, status: starsCursor ? 'Resuming stars fetch...' : 'Fetching stars (GraphQL)...' }));
-      const starsResult = await fetchAllStargazersGraphQL(token, owner, repo, updateProgress, starsCursor);
-      console.log(`Stars fetch: ${starsResult.stargazers.length} stars, hasMore: ${starsResult.hasMorePages}, hitRateLimit: ${starsResult.hitRateLimit}`);
-      setProgress(prev => ({ ...prev, stars: { ...prev.stars, done: true, partial: starsResult.hasMorePages || starsResult.hitRateLimit } }));
-
-      // Fetch forks (with resume support via page number)
       const forksStartPage = resumeState?.forks?.lastPage ? resumeState.forks.lastPage + 1 : 1;
-      setProgress(prev => ({ ...prev, status: forksStartPage > 1 ? `Resuming forks from page ${forksStartPage}...` : 'Fetching forks...' }));
-      const forksResult = await fetchAllForks(octokit, owner, repo, updateProgress, forksStartPage);
-      console.log(`Forks fetch: ${forksResult.forks.length} forks, hitLimit: ${forksResult.hitPaginationLimit}, lastPage: ${forksResult.lastPage}`);
-      setProgress(prev => ({ ...prev, forks: { ...prev.forks, done: true, partial: forksResult.hitPaginationLimit } }));
-
-      // Fetch issues (with resume support via since date)
       const issuesSinceDate = resumeState?.issues?.lastDate || null;
-      setProgress(prev => ({ ...prev, status: issuesSinceDate ? `Fetching issues since ${issuesSinceDate}...` : 'Fetching issues...' }));
-      const issuesResult = await fetchAllIssues(octokit, owner, repo, updateProgress, issuesSinceDate);
-      console.log(`Issues fetch: ${issuesResult.issues.length} issues, hitLimit: ${issuesResult.hitPaginationLimit}, lastDate: ${issuesResult.lastDate}`);
-      setProgress(prev => ({ ...prev, issues: { ...prev.issues, done: true, partial: issuesResult.hitPaginationLimit } }));
-
-      // Fetch PRs (with resume support via page number)
       const prsStartPage = resumeState?.prs?.lastPage ? resumeState.prs.lastPage + 1 : 1;
-      setProgress(prev => ({ ...prev, status: prsStartPage > 1 ? `Resuming PRs from page ${prsStartPage}...` : 'Fetching pull requests...' }));
-      const prsResult = await fetchAllPullRequests(octokit, owner, repo, updateProgress, prsStartPage);
-      console.log(`PRs fetch: ${prsResult.prs.length} PRs, hitLimit: ${prsResult.hitPaginationLimit}, lastPage: ${prsResult.lastPage}`);
-      setProgress(prev => ({ ...prev, prs: { ...prev.prs, done: true, partial: prsResult.hitPaginationLimit } }));
-
-      // Fetch commits (with resume support via since date)
       const commitsSinceDate = resumeState?.commits?.lastDate || null;
-      setProgress(prev => ({ ...prev, status: commitsSinceDate ? `Fetching commits since ${commitsSinceDate}...` : 'Fetching commits...' }));
-      const commitsResult = await fetchContributorCommits(octokit, owner, repo, updateProgress, commitsSinceDate);
+
+      setProgress(prev => ({ ...prev, status: 'Fetching all data (parallel)...' }));
+
+      // Fetch all data types in parallel for speed
+      const [starsResult, forksResult, issuesResult, prsResult, commitsResult] = await Promise.all([
+        fetchAllStargazersGraphQL(token, owner, repo, updateProgress, starsCursor),
+        fetchAllForks(octokit, owner, repo, updateProgress, forksStartPage),
+        fetchAllIssues(octokit, owner, repo, updateProgress, issuesSinceDate),
+        fetchAllPullRequests(octokit, owner, repo, updateProgress, prsStartPage),
+        fetchContributorCommits(octokit, owner, repo, updateProgress, commitsSinceDate)
+      ]);
+
+      console.log(`Stars fetch: ${starsResult.stargazers.length} stars, hasMore: ${starsResult.hasMorePages}, hitRateLimit: ${starsResult.hitRateLimit}`);
+      console.log(`Forks fetch: ${forksResult.forks.length} forks, hitLimit: ${forksResult.hitPaginationLimit}, lastPage: ${forksResult.lastPage}`);
+      console.log(`Issues fetch: ${issuesResult.issues.length} issues, hitLimit: ${issuesResult.hitPaginationLimit}, lastDate: ${issuesResult.lastDate}`);
+      console.log(`PRs fetch: ${prsResult.prs.length} PRs, hitLimit: ${prsResult.hitPaginationLimit}, lastPage: ${prsResult.lastPage}`);
       console.log(`Commits fetch: ${commitsResult.commits.length} commits, hitLimit: ${commitsResult.hitPaginationLimit}, lastDate: ${commitsResult.lastDate}`);
       setProgress(prev => ({ ...prev, commits: { ...prev.commits, done: true, partial: commitsResult.hitPaginationLimit } }));
 
@@ -332,141 +329,48 @@ function App() {
     }
   };
 
-  // Handle updating all cached repos to today (full update with pagination resume)
-  const handleUpdateAll = async (repos) => {
-    const token = localStorage.getItem('github_analytics_token');
+  // Handle refreshing all cached repos (update data + calculate MoM metrics)
+  const handleRefreshAll = async () => {
     if (!token) {
       setError('No GitHub token found. Please enter your token first.');
       return;
     }
 
-    if (!confirm(`Update all ${repos.length} cached repositories to today? This may take a while.`)) {
-      return;
-    }
+    setRefreshingAll(true);
+    setRefreshProgress('Loading repos...');
 
-    setIsLoading(true);
-    setError(null);
+    try {
+      const repos = await getCachedRepos();
 
-    for (let i = 0; i < repos.length; i++) {
-      const repo = repos[i];
-      setProgress({ status: `Updating ${repo.owner}/${repo.repo} (${i + 1}/${repos.length})...` });
+      // Step 1: Update all repos to today
+      for (let i = 0; i < repos.length; i++) {
+        const repo = repos[i];
+        setRefreshProgress(`Updating ${repo.owner}/${repo.repo} (${i + 1}/${repos.length})`);
 
-      try {
-        const cached = await getRepoFromCache(repo.owner, repo.repo);
-        const resumeState = cached?.fetchState || null;
-
-        // If there's incomplete data (pagination limited), use resume state
-        // Otherwise, just fetch new data since last date
-        const hasIncompleteData = resumeState?.stars?.limited ||
-                                   resumeState?.forks?.limited ||
-                                   resumeState?.prs?.limited;
-
-        if (hasIncompleteData) {
-          await fetchData(repo.owner, repo.repo, token, resumeState);
-        } else {
-          // Just fetch new data since last cached date
-          const updateState = {
+        try {
+          const cached = await getRepoFromCache(repo.owner, repo.repo);
+          const resumeState = {
             issues: { lastDate: cached?.lastDate },
             commits: { lastDate: cached?.lastDate }
           };
-          await fetchData(repo.owner, repo.repo, token, updateState);
+
+          await fetchData(repo.owner, repo.repo, token, resumeState);
+        } catch (err) {
+          console.error(`Error updating ${repo.owner}/${repo.repo}:`, err);
         }
-      } catch (err) {
-        console.error(`Error updating ${repo.owner}/${repo.repo}:`, err);
-        // Continue with next repo even if one fails
-      }
-    }
-
-    setProgress({ status: 'All repositories updated!' });
-    setCacheKey(k => k + 1);
-    setIsLoading(false);
-  };
-
-  // Handle quick update - only fetch data since last cached date (no pagination resume)
-  const handleQuickUpdateAll = async (repos) => {
-    const token = localStorage.getItem('github_analytics_token');
-    if (!token) {
-      setError('No GitHub token found. Please enter your token first.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    for (let i = 0; i < repos.length; i++) {
-      const repo = repos[i];
-      setProgress({ status: `Quick update ${repo.owner}/${repo.repo} (${i + 1}/${repos.length})...` });
-
-      try {
-        const cached = await getRepoFromCache(repo.owner, repo.repo);
-        if (!cached?.lastDate) {
-          console.log(`Skipping ${repo.owner}/${repo.repo} - no cached data`);
-          continue;
-        }
-
-        // Only fetch new data since last cached date (no pagination resume)
-        const quickUpdateState = {
-          stars: { cursor: 'SKIP' }, // Special flag to skip stars (most expensive)
-          issues: { lastDate: cached.lastDate },
-          commits: { lastDate: cached.lastDate }
-        };
-
-        await fetchDataQuick(repo.owner, repo.repo, token, cached.lastDate);
-      } catch (err) {
-        console.error(`Error quick updating ${repo.owner}/${repo.repo}:`, err);
-        // Continue with next repo even if one fails
-      }
-    }
-
-    setProgress({ status: 'Quick update complete!' });
-    setCacheKey(k => k + 1);
-    setIsLoading(false);
-  };
-
-  // Quick fetch - only gets data since a specific date, skips expensive operations
-  const fetchDataQuick = async (owner, repo, token, sinceDate) => {
-    try {
-      const octokit = createGitHubClient(token);
-      const info = await fetchRepoInfo(octokit, owner, repo);
-
-      const updateProgress = (update) => {
-        setProgress(prev => ({
-          ...prev,
-          [update.type]: { fetched: update.fetched }
-        }));
-      };
-
-      // Only fetch issues and commits (they support 'since' parameter and are fast)
-      setProgress(prev => ({ ...prev, status: `Fetching issues since ${sinceDate}...` }));
-      const issuesResult = await fetchAllIssues(octokit, owner, repo, updateProgress, sinceDate);
-
-      setProgress(prev => ({ ...prev, status: `Fetching commits since ${sinceDate}...` }));
-      const commitsResult = await fetchContributorCommits(octokit, owner, repo, updateProgress, sinceDate);
-
-      // Create minimal aggregated data for new dates only
-      setProgress({ status: 'Processing new data...' });
-      const newAggregated = aggregateToDaily(
-        info,
-        [], // No new stars in quick update
-        [], // No new forks in quick update
-        issuesResult.issues,
-        [], // No new PRs in quick update
-        commitsResult.commits
-      );
-
-      // Merge with existing cached data
-      const cached = await getRepoFromCache(owner, repo);
-      if (cached && cached.metrics.length > 0) {
-        const existingData = transformCachedMetrics(cached.metrics);
-        const finalData = mergeDailyMetrics(existingData, newAggregated);
-
-        setProgress({ status: 'Saving...' });
-        await saveRepoToCache(owner, repo, finalData, true, null);
       }
 
+      // Step 2: Calculate MoM metrics
+      setRefreshProgress('Calculating MoM metrics...');
+      await backfillAllMonthlyMetrics();
+
+      setCacheKey(k => k + 1);
     } catch (err) {
-      console.error(`Error in quick fetch for ${owner}/${repo}:`, err);
-      throw err;
+      console.error('Error refreshing all repos:', err);
+      setError(err.message || 'Failed to refresh repositories');
+    } finally {
+      setRefreshingAll(false);
+      setRefreshProgress('');
     }
   };
 
@@ -528,23 +432,47 @@ function App() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <RepoInput onSubmit={handleSubmit} isLoading={isLoading} token={token} />
-
-            <CachedRepos
-              key={cacheKey}
-              onSelect={handleCachedRepoSelect}
-              onUpdateAll={handleUpdateAll}
-              onQuickUpdateAll={handleQuickUpdateAll}
-              isLoading={isLoading}
+            <BatchFetch
+              token={token}
+              onComplete={() => setCacheKey(k => k + 1)}
             />
+
+            {/* Refresh All Repositories */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">All Cached Repositories</h3>
+              <button
+                onClick={handleRefreshAll}
+                disabled={refreshingAll || !token}
+                className="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                title="Update all cached repositories and calculate MoM metrics"
+              >
+                {refreshingAll ? (
+                  <svg className="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                  </svg>
+                )}
+                Refresh to Today
+              </button>
+              {refreshProgress && (
+                <p className="text-xs text-blue-600 mt-2">{refreshProgress}</p>
+              )}
+            </div>
           </div>
 
-          <TokenSettings
-            token={token}
-            setToken={setToken}
-            saveToken={saveToken}
-            setSaveToken={setSaveToken}
-          />
+          <div>
+            <TokenSettings
+              token={token}
+              setToken={setToken}
+              saveToken={saveToken}
+              setSaveToken={setSaveToken}
+            />
+            <RateLimitStatus token={token} />
+          </div>
         </div>
       </div>
 
@@ -564,39 +492,79 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 min-w-0">
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">GitHub Repository Analytics</h1>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold mb-4">GitHub Repository Analytics</h1>
+
+            {/* Navigation Tabs */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setActiveView('repoData')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeView === 'repoData'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Repo Data
+              </button>
+              <button
+                onClick={() => setActiveView('compare')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeView === 'compare'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Repo Compare
+              </button>
+            </div>
           </div>
 
-          {error && (
-            <div className="bg-red-100 border border-red-400 rounded-lg p-4 mb-6">
-              <p className="text-red-700">{error}</p>
-            </div>
+          {/* Repo Data View */}
+          {activeView === 'repoData' && (
+            <>
+              <CachedRepos
+                key={cacheKey}
+                onSelect={handleCachedRepoSelect}
+                isLoading={isLoading}
+              />
+
+              {error && (
+                <div className="bg-red-100 border border-red-400 rounded-lg p-4 mb-6">
+                  <p className="text-red-700">{error}</p>
+                </div>
+              )}
+
+              {isLoading && <LoadingProgress progress={progress} />}
+
+              {!isLoading && dailyData && repoInfo && (
+                <Dashboard
+                  repoInfo={repoInfo}
+                  dailyData={dailyData}
+                  dataSource={dataSource}
+                  lastFetched={lastFetched}
+                  onForceRefresh={handleUpdateToToday}
+                  paginationLimited={starsPaginationLimited}
+                  onContinueFetching={handleContinueFetching}
+                  onDeleteAndRefetch={handleDeleteAndRefetch}
+                />
+              )}
+
+              {!isLoading && !dailyData && (
+                <div className="text-center py-16 text-gray-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <p className="text-lg">Enter a repository to analyze</p>
+                  <p className="text-sm mt-1">Or select a cached repository from the sidebar</p>
+                </div>
+              )}
+            </>
           )}
 
-          {isLoading && <LoadingProgress progress={progress} />}
-
-          {!isLoading && dailyData && repoInfo && (
-            <Dashboard
-              repoInfo={repoInfo}
-              dailyData={dailyData}
-              dataSource={dataSource}
-              lastFetched={lastFetched}
-              onForceRefresh={handleUpdateToToday}
-              paginationLimited={starsPaginationLimited}
-              onContinueFetching={handleContinueFetching}
-              onDeleteAndRefetch={handleDeleteAndRefetch}
-            />
-          )}
-
-          {!isLoading && !dailyData && (
-            <div className="text-center py-16 text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <p className="text-lg">Enter a repository to analyze</p>
-              <p className="text-sm mt-1">Or select a cached repository from the sidebar</p>
-            </div>
+          {/* Compare View */}
+          {activeView === 'compare' && (
+            <CompareView />
           )}
         </div>
       </div>

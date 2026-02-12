@@ -182,6 +182,10 @@ export async function saveRepoToCache(owner, repo, dailyMetrics, incrementalUpda
       }
     }
 
+    // Calculate and save monthly metrics
+    const monthlyMetrics = calculateMonthlyMetrics(dailyMetrics);
+    await saveMonthlyMetrics(repoData.id, monthlyMetrics);
+
     return repoData;
   } catch (error) {
     console.error('Error saving to cache:', error);
@@ -256,6 +260,293 @@ export async function deleteRepoFromCache(owner, repo) {
   } catch (error) {
     console.error('Error deleting from cache:', error);
     return false;
+  }
+}
+
+// Calculate monthly metrics from daily metrics
+export function calculateMonthlyMetrics(dailyMetrics) {
+  if (!dailyMetrics || dailyMetrics.length === 0) return [];
+
+  // Group daily metrics by month (using month-end date)
+  const monthlyData = new Map();
+
+  for (const day of dailyMetrics) {
+    const date = new Date(day.date);
+    // Get the last day of the month
+    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    const monthEndStr = monthEnd.toISOString().split('T')[0];
+
+    // Keep the latest day's data for each month (which represents month-end values)
+    if (!monthlyData.has(monthEndStr) || day.date > monthlyData.get(monthEndStr).date) {
+      monthlyData.set(monthEndStr, {
+        monthEnd: monthEndStr,
+        date: day.date,
+        stars: day.totalStars || 0,
+        forks: day.totalForks || 0,
+        issuesOpened: day.totalIssuesOpened || 0,
+        issuesClosed: day.totalIssuesClosed || 0,
+        prsOpened: day.totalPRsOpened || 0,
+        prsMerged: day.totalPRsMerged || 0,
+        contributors: day.totalContributors || 0
+      });
+    }
+  }
+
+  // Sort by month and calculate MoM changes
+  const sortedMonths = Array.from(monthlyData.values())
+    .sort((a, b) => a.monthEnd.localeCompare(b.monthEnd));
+
+  return sortedMonths.map((month, index) => {
+    const prevMonth = index > 0 ? sortedMonths[index - 1] : null;
+
+    const calcChange = (current, previous) => previous !== null ? current - previous : null;
+    const calcGrowthPct = (current, previous) => {
+      if (previous === null || previous === 0) return null;
+      return Math.round(((current - previous) / previous) * 10000) / 100; // 2 decimal places
+    };
+
+    return {
+      monthEnd: month.monthEnd,
+
+      starsAtMonthEnd: month.stars,
+      starsMomChange: calcChange(month.stars, prevMonth?.stars ?? null),
+      starsMomGrowthPct: calcGrowthPct(month.stars, prevMonth?.stars ?? null),
+
+      forksAtMonthEnd: month.forks,
+      forksMomChange: calcChange(month.forks, prevMonth?.forks ?? null),
+      forksMomGrowthPct: calcGrowthPct(month.forks, prevMonth?.forks ?? null),
+
+      issuesOpenedAtMonthEnd: month.issuesOpened,
+      issuesOpenedMomChange: calcChange(month.issuesOpened, prevMonth?.issuesOpened ?? null),
+      issuesOpenedMomGrowthPct: calcGrowthPct(month.issuesOpened, prevMonth?.issuesOpened ?? null),
+
+      issuesClosedAtMonthEnd: month.issuesClosed,
+      issuesClosedMomChange: calcChange(month.issuesClosed, prevMonth?.issuesClosed ?? null),
+      issuesClosedMomGrowthPct: calcGrowthPct(month.issuesClosed, prevMonth?.issuesClosed ?? null),
+
+      prsOpenedAtMonthEnd: month.prsOpened,
+      prsOpenedMomChange: calcChange(month.prsOpened, prevMonth?.prsOpened ?? null),
+      prsOpenedMomGrowthPct: calcGrowthPct(month.prsOpened, prevMonth?.prsOpened ?? null),
+
+      prsMergedAtMonthEnd: month.prsMerged,
+      prsMergedMomChange: calcChange(month.prsMerged, prevMonth?.prsMerged ?? null),
+      prsMergedMomGrowthPct: calcGrowthPct(month.prsMerged, prevMonth?.prsMerged ?? null),
+
+      contributorsAtMonthEnd: month.contributors,
+      contributorsMomChange: calcChange(month.contributors, prevMonth?.contributors ?? null),
+      contributorsMomGrowthPct: calcGrowthPct(month.contributors, prevMonth?.contributors ?? null)
+    };
+  });
+}
+
+// Save monthly metrics to Supabase
+export async function saveMonthlyMetrics(repoId, monthlyMetrics) {
+  if (!supabase || !monthlyMetrics || monthlyMetrics.length === 0) return;
+
+  try {
+    // Delete existing monthly metrics for this repo
+    await supabase
+      .from('monthly_metrics')
+      .delete()
+      .eq('repo_id', repoId);
+
+    // Insert new monthly metrics in batches
+    const batchSize = 100;
+    for (let i = 0; i < monthlyMetrics.length; i += batchSize) {
+      const batch = monthlyMetrics.slice(i, i + batchSize).map(m => ({
+        repo_id: repoId,
+        month_end: m.monthEnd,
+        stars_at_month_end: m.starsAtMonthEnd,
+        stars_mom_change: m.starsMomChange,
+        stars_mom_growth_pct: m.starsMomGrowthPct,
+        forks_at_month_end: m.forksAtMonthEnd,
+        forks_mom_change: m.forksMomChange,
+        forks_mom_growth_pct: m.forksMomGrowthPct,
+        issues_opened_at_month_end: m.issuesOpenedAtMonthEnd,
+        issues_opened_mom_change: m.issuesOpenedMomChange,
+        issues_opened_mom_growth_pct: m.issuesOpenedMomGrowthPct,
+        issues_closed_at_month_end: m.issuesClosedAtMonthEnd,
+        issues_closed_mom_change: m.issuesClosedMomChange,
+        issues_closed_mom_growth_pct: m.issuesClosedMomGrowthPct,
+        prs_opened_at_month_end: m.prsOpenedAtMonthEnd,
+        prs_opened_mom_change: m.prsOpenedMomChange,
+        prs_opened_mom_growth_pct: m.prsOpenedMomGrowthPct,
+        prs_merged_at_month_end: m.prsMergedAtMonthEnd,
+        prs_merged_mom_change: m.prsMergedMomChange,
+        prs_merged_mom_growth_pct: m.prsMergedMomGrowthPct,
+        contributors_at_month_end: m.contributorsAtMonthEnd,
+        contributors_mom_change: m.contributorsMomChange,
+        contributors_mom_growth_pct: m.contributorsMomGrowthPct,
+        updated_at: new Date().toISOString()
+      }));
+
+      const { error } = await supabase
+        .from('monthly_metrics')
+        .insert(batch);
+
+      if (error) {
+        console.error('Error saving monthly metrics batch:', error);
+      }
+    }
+
+    console.log(`Saved ${monthlyMetrics.length} monthly metrics for repo ${repoId}`);
+  } catch (error) {
+    console.error('Error saving monthly metrics:', error);
+  }
+}
+
+// Fetch monthly metrics for a repository
+export async function getMonthlyMetrics(owner, repo) {
+  if (!supabase) return [];
+
+  try {
+    // First get the repo ID
+    const { data: repoData, error: repoError } = await supabase
+      .from('repositories')
+      .select('id')
+      .eq('owner', owner)
+      .eq('repo', repo)
+      .single();
+
+    if (repoError || !repoData) return [];
+
+    const { data, error } = await supabase
+      .from('monthly_metrics')
+      .select('*')
+      .eq('repo_id', repoData.id)
+      .order('month_end', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching monthly metrics:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching monthly metrics:', error);
+    return [];
+  }
+}
+
+// Transform monthly metrics from DB format to frontend format
+export function transformMonthlyMetrics(metrics) {
+  return metrics.map(m => ({
+    monthEnd: m.month_end,
+    starsAtMonthEnd: m.stars_at_month_end,
+    starsMomChange: m.stars_mom_change,
+    starsMomGrowthPct: m.stars_mom_growth_pct,
+    forksAtMonthEnd: m.forks_at_month_end,
+    forksMomChange: m.forks_mom_change,
+    forksMomGrowthPct: m.forks_mom_growth_pct,
+    issuesOpenedAtMonthEnd: m.issues_opened_at_month_end,
+    issuesOpenedMomChange: m.issues_opened_mom_change,
+    issuesOpenedMomGrowthPct: m.issues_opened_mom_growth_pct,
+    issuesClosedAtMonthEnd: m.issues_closed_at_month_end,
+    issuesClosedMomChange: m.issues_closed_mom_change,
+    issuesClosedMomGrowthPct: m.issues_closed_mom_growth_pct,
+    prsOpenedAtMonthEnd: m.prs_opened_at_month_end,
+    prsOpenedMomChange: m.prs_opened_mom_change,
+    prsOpenedMomGrowthPct: m.prs_opened_mom_growth_pct,
+    prsMergedAtMonthEnd: m.prs_merged_at_month_end,
+    prsMergedMomChange: m.prs_merged_mom_change,
+    prsMergedMomGrowthPct: m.prs_merged_mom_growth_pct,
+    contributorsAtMonthEnd: m.contributors_at_month_end,
+    contributorsMomChange: m.contributors_mom_change,
+    contributorsMomGrowthPct: m.contributors_mom_growth_pct
+  }));
+}
+
+// Backfill monthly metrics for all cached repos from existing daily data
+export async function backfillAllMonthlyMetrics() {
+  if (!supabase) return { success: false, message: 'Supabase not configured' };
+
+  try {
+    // Get all repositories
+    const { data: repos, error: reposError } = await supabase
+      .from('repositories')
+      .select('id, owner, repo');
+
+    if (reposError) {
+      console.error('Error fetching repos:', reposError);
+      return { success: false, message: reposError.message };
+    }
+
+    let processed = 0;
+    for (const repo of repos) {
+      // Fetch daily metrics for this repo
+      let allMetrics = [];
+      let from = 0;
+      const batchSize = 1000;
+
+      while (true) {
+        const { data: batch, error: batchError } = await supabase
+          .from('daily_metrics')
+          .select('*')
+          .eq('repo_id', repo.id)
+          .order('date', { ascending: true })
+          .range(from, from + batchSize - 1);
+
+        if (batchError || !batch || batch.length === 0) break;
+        allMetrics = allMetrics.concat(batch);
+        if (batch.length < batchSize) break;
+        from += batchSize;
+      }
+
+      if (allMetrics.length > 0) {
+        // Transform to frontend format
+        const transformed = transformCachedMetrics(allMetrics);
+        // Calculate monthly metrics
+        const monthlyMetrics = calculateMonthlyMetrics(transformed);
+        // Save to database
+        await saveMonthlyMetrics(repo.id, monthlyMetrics);
+        processed++;
+        console.log(`Backfilled monthly metrics for ${repo.owner}/${repo.repo}`);
+      }
+    }
+
+    return { success: true, message: `Backfilled ${processed} repositories` };
+  } catch (error) {
+    console.error('Error backfilling monthly metrics:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+// Get monthly metrics for multiple repos (for comparison)
+export async function getMonthlyMetricsForRepos(repoKeys) {
+  if (!supabase || !repoKeys || repoKeys.length === 0) return {};
+
+  try {
+    const result = {};
+
+    for (const repoKey of repoKeys) {
+      const [owner, repo] = repoKey.split('/');
+
+      // Get repo ID
+      const { data: repoData, error: repoError } = await supabase
+        .from('repositories')
+        .select('id')
+        .eq('owner', owner)
+        .eq('repo', repo)
+        .single();
+
+      if (repoError || !repoData) continue;
+
+      // Get monthly metrics
+      const { data, error } = await supabase
+        .from('monthly_metrics')
+        .select('*')
+        .eq('repo_id', repoData.id)
+        .order('month_end', { ascending: true });
+
+      if (!error && data) {
+        result[repoKey] = transformMonthlyMetrics(data);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching monthly metrics for repos:', error);
+    return {};
   }
 }
 
