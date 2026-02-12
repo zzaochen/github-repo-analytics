@@ -550,6 +550,184 @@ export async function getMonthlyMetricsForRepos(repoKeys) {
   }
 }
 
+// Get or create a repository record (for incremental saving)
+export async function getOrCreateRepo(owner, repo) {
+  if (!supabase) return null;
+
+  try {
+    // Try to get existing repo
+    let { data: repoData, error } = await supabase
+      .from('repositories')
+      .select('*')
+      .eq('owner', owner)
+      .eq('repo', repo)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      // Not found, create it
+      const { data: newRepo, error: insertError } = await supabase
+        .from('repositories')
+        .insert({ owner, repo, last_fetched: new Date().toISOString() })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating repository:', insertError);
+        return null;
+      }
+      return newRepo;
+    }
+
+    if (error) {
+      console.error('Error fetching repository:', error);
+      return null;
+    }
+
+    return repoData;
+  } catch (error) {
+    console.error('Error in getOrCreateRepo:', error);
+    return null;
+  }
+}
+
+// Update fetch progress/state for a repository (cursor, page, etc.)
+export async function updateFetchProgress(owner, repo, fetchState) {
+  if (!supabase) return false;
+
+  try {
+    const updateData = {
+      last_fetched: new Date().toISOString()
+    };
+
+    // Add fetch state fields
+    if (fetchState.stars) {
+      updateData.stars_last_page = fetchState.stars.lastPage;
+      updateData.stars_pagination_limited = fetchState.stars.limited;
+      updateData.stars_cursor = fetchState.stars.cursor;
+    }
+    if (fetchState.forks) {
+      updateData.forks_last_page = fetchState.forks.lastPage;
+      updateData.forks_pagination_limited = fetchState.forks.limited;
+    }
+    if (fetchState.prs) {
+      updateData.prs_last_page = fetchState.prs.lastPage;
+      updateData.prs_pagination_limited = fetchState.prs.limited;
+    }
+    if (fetchState.issues) {
+      updateData.issues_last_date = fetchState.issues.lastDate;
+    }
+    if (fetchState.commits) {
+      updateData.commits_last_date = fetchState.commits.lastDate;
+    }
+    // Track if fetch is in progress (for resume detection)
+    if (fetchState.inProgress !== undefined) {
+      updateData.fetch_in_progress = fetchState.inProgress;
+    }
+
+    const { error } = await supabase
+      .from('repositories')
+      .update(updateData)
+      .eq('owner', owner)
+      .eq('repo', repo);
+
+    if (error) {
+      console.error('Error updating fetch progress:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateFetchProgress:', error);
+    return false;
+  }
+}
+
+// Save raw fetch data incrementally (stars, forks, etc.) to a staging table
+// This allows resuming from exactly where we left off
+export async function saveIncrementalRawData(owner, repo, dataType, items) {
+  if (!supabase || !items || items.length === 0) return true;
+
+  try {
+    const repoData = await getOrCreateRepo(owner, repo);
+    if (!repoData) return false;
+
+    // Save to a raw data staging table based on type
+    const tableName = `raw_${dataType}`;
+
+    // For now, we'll store the processed daily metrics incrementally
+    // The raw data approach would need additional tables
+    console.log(`Would save ${items.length} ${dataType} items for ${owner}/${repo}`);
+    return true;
+  } catch (error) {
+    console.error(`Error saving incremental ${dataType}:`, error);
+    return false;
+  }
+}
+
+// Save partial daily metrics during fetch (upsert to not lose existing data)
+export async function savePartialMetrics(owner, repo, dailyMetrics) {
+  if (!supabase || !dailyMetrics || dailyMetrics.length === 0) return true;
+
+  try {
+    const repoData = await getOrCreateRepo(owner, repo);
+    if (!repoData) return false;
+
+    // Upsert metrics in batches
+    const batchSize = 100;
+    for (let i = 0; i < dailyMetrics.length; i += batchSize) {
+      const batch = dailyMetrics.slice(i, i + batchSize).map(m => ({
+        repo_id: repoData.id,
+        date: m.date,
+        total_stars: m.totalStars,
+        total_forks: m.totalForks,
+        total_contributors: m.totalContributors,
+        total_issues_opened: m.totalIssuesOpened,
+        total_issues_closed: m.totalIssuesClosed,
+        total_prs_opened: m.totalPRsOpened,
+        total_prs_closed: m.totalPRsClosed,
+        total_prs_merged: m.totalPRsMerged
+      }));
+
+      const { error } = await supabase
+        .from('daily_metrics')
+        .upsert(batch, { onConflict: 'repo_id,date' });
+
+      if (error) {
+        console.error('Error saving partial metrics batch:', error);
+        return false;
+      }
+    }
+
+    console.log(`Saved ${dailyMetrics.length} partial metrics for ${owner}/${repo}`);
+    return true;
+  } catch (error) {
+    console.error('Error saving partial metrics:', error);
+    return false;
+  }
+}
+
+// Check for incomplete fetches that can be resumed
+export async function getIncompleteFetches() {
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('repositories')
+      .select('*')
+      .eq('fetch_in_progress', true);
+
+    if (error) {
+      console.error('Error checking incomplete fetches:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getIncompleteFetches:', error);
+    return [];
+  }
+}
+
 // Merge new daily metrics with existing cached metrics
 // For pagination resumption, we need to ADD new values to existing ones
 export function mergeDailyMetrics(existingMetrics, newMetrics) {

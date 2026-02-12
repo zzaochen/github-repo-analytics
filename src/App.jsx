@@ -23,7 +23,9 @@ import {
   mergeDailyMetrics,
   deleteRepoFromCache,
   backfillAllMonthlyMetrics,
-  getCachedRepos
+  getCachedRepos,
+  updateFetchProgress,
+  getOrCreateRepo
 } from './services/supabase';
 import { aggregateToDaily } from './utils/dataAggregator';
 
@@ -112,6 +114,9 @@ function App() {
         console.log('Full fetch');
       }
 
+      // Mark fetch as in progress so we can resume if interrupted
+      await updateFetchProgress(owner, repo, { inProgress: true });
+
       const octokit = createGitHubClient(token);
       const info = await fetchRepoInfo(octokit, owner, repo);
       setRepoInfo(info);
@@ -129,6 +134,44 @@ function App() {
         }));
       };
 
+      // Track current fetch state for incremental saving
+      const currentFetchState = {
+        stars: { cursor: resumeState?.stars?.cursor || null, limited: false },
+        forks: { lastPage: resumeState?.forks?.lastPage || 0, limited: false },
+        issues: { lastDate: resumeState?.issues?.lastDate || null },
+        prs: { lastPage: resumeState?.prs?.lastPage || 0, limited: false },
+        commits: { lastDate: resumeState?.commits?.lastDate || null }
+      };
+
+      // Create onSave callback for incremental saving
+      const createOnSave = () => async (saveData) => {
+        console.log(`Incremental save: ${saveData.type}, ${saveData.data?.length || 0} items`);
+
+        // Update fetch state based on save data
+        if (saveData.type === 'stars' && saveData.cursor) {
+          currentFetchState.stars.cursor = saveData.cursor;
+          currentFetchState.stars.limited = saveData.hasMore;
+        } else if (saveData.type === 'forks' && saveData.page) {
+          currentFetchState.forks.lastPage = saveData.page;
+          currentFetchState.forks.limited = saveData.hasMore;
+        } else if (saveData.type === 'issues' && saveData.lastDate) {
+          currentFetchState.issues.lastDate = saveData.lastDate;
+        } else if (saveData.type === 'prs' && saveData.page) {
+          currentFetchState.prs.lastPage = saveData.page;
+          currentFetchState.prs.limited = saveData.hasMore;
+        } else if (saveData.type === 'commits' && saveData.lastDate) {
+          currentFetchState.commits.lastDate = saveData.lastDate;
+        }
+
+        // Save fetch progress to database
+        await updateFetchProgress(owner, repo, {
+          ...currentFetchState,
+          inProgress: true
+        });
+      };
+
+      const onSave = createOnSave();
+
       // Prepare resume state parameters
       const starsCursor = resumeState?.stars?.cursor || null;
       const forksStartPage = resumeState?.forks?.lastPage ? resumeState.forks.lastPage + 1 : 1;
@@ -138,13 +181,13 @@ function App() {
 
       setProgress(prev => ({ ...prev, status: 'Fetching all data (parallel)...' }));
 
-      // Fetch all data types in parallel for speed
+      // Fetch all data types in parallel for speed, with incremental saving
       const [starsResult, forksResult, issuesResult, prsResult, commitsResult] = await Promise.all([
-        fetchAllStargazersGraphQL(token, owner, repo, updateProgress, starsCursor),
-        fetchAllForks(octokit, owner, repo, updateProgress, forksStartPage),
-        fetchAllIssues(octokit, owner, repo, updateProgress, issuesSinceDate),
-        fetchAllPullRequests(octokit, owner, repo, updateProgress, prsStartPage),
-        fetchContributorCommits(octokit, owner, repo, updateProgress, commitsSinceDate)
+        fetchAllStargazersGraphQL(token, owner, repo, updateProgress, starsCursor, onSave),
+        fetchAllForks(octokit, owner, repo, updateProgress, forksStartPage, onSave),
+        fetchAllIssues(octokit, owner, repo, updateProgress, issuesSinceDate, onSave),
+        fetchAllPullRequests(octokit, owner, repo, updateProgress, prsStartPage, onSave),
+        fetchContributorCommits(octokit, owner, repo, updateProgress, commitsSinceDate, onSave)
       ]);
 
       console.log(`Stars fetch: ${starsResult.stargazers.length} stars, hasMore: ${starsResult.hasMorePages}, hitRateLimit: ${starsResult.hitRateLimit}`);
@@ -210,6 +253,9 @@ function App() {
 
       await saveRepoToCache(owner, repo, finalData, isResuming, fetchState);
 
+      // Mark fetch as complete
+      await updateFetchProgress(owner, repo, { ...fetchState, inProgress: false });
+
       setDataSource(isResuming ? 'resumed' : 'github');
       setLastFetched(new Date().toISOString());
       setStarsPaginationLimited(anyLimited);
@@ -222,6 +268,7 @@ function App() {
     } catch (err) {
       console.error('Error fetching repo:', err);
       setError(err.message || 'Failed to fetch repository data');
+      // Keep inProgress true on error so we can resume
     }
   };
 

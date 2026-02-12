@@ -89,7 +89,8 @@ async function handleRateLimit(error, onProgress, type, fetched) {
 }
 
 // Fetch stargazers using GraphQL (cursor-based pagination, no 1000-page limit)
-export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, startCursor = null) {
+// onSave callback is called periodically to save progress
+export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, startCursor = null, onSave = null) {
   const graphqlWithAuth = createGraphQLClient(token);
   const stargazers = [];
   let cursor = startCursor;
@@ -98,6 +99,8 @@ export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, 
   const maxRetries = 10;
   let lastCursor = cursor;
   let hitRateLimit = false;
+  const SAVE_INTERVAL = 500; // Save every 500 items
+  let lastSaveCount = 0;
 
   console.log(`Fetching stargazers via GraphQL${startCursor ? ` (resuming from cursor)` : ' (full fetch)'}...`);
 
@@ -156,6 +159,18 @@ export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, 
         remaining: rateLimit.remaining
       });
 
+      // Save progress incrementally
+      if (onSave && stargazers.length - lastSaveCount >= SAVE_INTERVAL) {
+        console.log(`Saving stars progress: ${stargazers.length} items, cursor: ${lastCursor}`);
+        await onSave({
+          type: 'stars',
+          data: stargazers.slice(lastSaveCount), // Only save new items since last save
+          cursor: lastCursor,
+          hasMore: hasNextPage
+        });
+        lastSaveCount = stargazers.length;
+      }
+
       // Check rate limit
       if (rateLimit.remaining < 50) {
         const resetTime = new Date(rateLimit.resetAt).getTime();
@@ -184,6 +199,15 @@ export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, 
       if (error.message?.includes('rate limit') || error.status === 403) {
         hitRateLimit = true;
         console.log('Hit GraphQL rate limit, saving progress...');
+        // Save remaining data before breaking
+        if (onSave && stargazers.length > lastSaveCount) {
+          await onSave({
+            type: 'stars',
+            data: stargazers.slice(lastSaveCount),
+            cursor: lastCursor,
+            hasMore: true
+          });
+        }
         break;
       }
 
@@ -196,6 +220,17 @@ export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, 
       // Wait before retry
       await sleep(5000);
     }
+  }
+
+  // Final save of any remaining data
+  if (onSave && stargazers.length > lastSaveCount) {
+    console.log(`Final save for stars: ${stargazers.length - lastSaveCount} items`);
+    await onSave({
+      type: 'stars',
+      data: stargazers.slice(lastSaveCount),
+      cursor: lastCursor,
+      hasMore: hasNextPage
+    });
   }
 
   return {
@@ -274,7 +309,7 @@ export async function fetchAllStargazers(octokit, owner, repo, onProgress, since
   };
 }
 
-export async function fetchAllForks(octokit, owner, repo, onProgress, startPage = 1) {
+export async function fetchAllForks(octokit, owner, repo, onProgress, startPage = 1, onSave = null) {
   const forks = [];
   let page = startPage;
   const perPage = 100;
@@ -282,6 +317,8 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
   const maxRetries = 10;
   let hitPaginationLimit = false;
   let lastPage = page;
+  const SAVE_INTERVAL = 500;
+  let lastSaveCount = 0;
 
   console.log(`Fetching forks${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'}...`);
 
@@ -307,6 +344,18 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
       lastPage = page;
       onProgress?.({ type: 'forks', fetched: forks.length + ((startPage - 1) * perPage), partial: false, page });
 
+      // Save progress incrementally
+      if (onSave && forks.length - lastSaveCount >= SAVE_INTERVAL) {
+        console.log(`Saving forks progress: ${forks.length} items, page: ${lastPage}`);
+        await onSave({
+          type: 'forks',
+          data: forks.slice(lastSaveCount),
+          page: lastPage,
+          hasMore: true
+        });
+        lastSaveCount = forks.length;
+      }
+
       if (data.length < perPage) break;
       page++;
       retryCount = 0;
@@ -318,6 +367,10 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
       if (isPaginationLimitError(error)) {
         console.warn(`Forks: Hit pagination limit at page ${page} (${forks.length} items this run)`);
         hitPaginationLimit = true;
+        // Save remaining data before breaking
+        if (onSave && forks.length > lastSaveCount) {
+          await onSave({ type: 'forks', data: forks.slice(lastSaveCount), page: lastPage, hasMore: true });
+        }
         onProgress?.({ type: 'forks', fetched: forks.length + ((startPage - 1) * perPage), partial: true, page: lastPage });
         break;
       }
@@ -331,6 +384,12 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
     }
   }
 
+  // Final save of any remaining data
+  if (onSave && forks.length > lastSaveCount) {
+    console.log(`Final save for forks: ${forks.length - lastSaveCount} items`);
+    await onSave({ type: 'forks', data: forks.slice(lastSaveCount), page: lastPage, hasMore: false });
+  }
+
   return {
     forks,
     hitPaginationLimit,
@@ -339,7 +398,7 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
   };
 }
 
-export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate = null) {
+export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate = null, onSave = null) {
   const issues = [];
   let page = 1;
   const perPage = 100;
@@ -347,6 +406,8 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
   const maxRetries = 10;
   let hitPaginationLimit = false;
   let lastDate = null;
+  const SAVE_INTERVAL = 500;
+  let lastSaveCount = 0;
 
   console.log(`Fetching issues${sinceDate ? ` since ${sinceDate}` : ' (full fetch)'}...`);
 
@@ -389,6 +450,13 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
 
       onProgress?.({ type: 'issues', fetched: issues.length, partial: false });
 
+      // Save progress incrementally
+      if (onSave && issues.length - lastSaveCount >= SAVE_INTERVAL) {
+        console.log(`Saving issues progress: ${issues.length} items, lastDate: ${lastDate}`);
+        await onSave({ type: 'issues', data: issues.slice(lastSaveCount), lastDate, hasMore: true });
+        lastSaveCount = issues.length;
+      }
+
       if (data.length < perPage) break;
       page++;
       retryCount = 0;
@@ -400,6 +468,9 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
       if (isPaginationLimitError(error)) {
         console.warn(`Issues: Hit pagination limit at ${issues.length} items`);
         hitPaginationLimit = true;
+        if (onSave && issues.length > lastSaveCount) {
+          await onSave({ type: 'issues', data: issues.slice(lastSaveCount), lastDate, hasMore: true });
+        }
         onProgress?.({ type: 'issues', fetched: issues.length, partial: true });
         break;
       }
@@ -413,6 +484,12 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
     }
   }
 
+  // Final save of any remaining data
+  if (onSave && issues.length > lastSaveCount) {
+    console.log(`Final save for issues: ${issues.length - lastSaveCount} items`);
+    await onSave({ type: 'issues', data: issues.slice(lastSaveCount), lastDate, hasMore: false });
+  }
+
   return {
     issues,
     hitPaginationLimit,
@@ -420,7 +497,7 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
   };
 }
 
-export async function fetchAllPullRequests(octokit, owner, repo, onProgress, startPage = 1) {
+export async function fetchAllPullRequests(octokit, owner, repo, onProgress, startPage = 1, onSave = null) {
   const prs = [];
   let page = startPage;
   const perPage = 100;
@@ -428,6 +505,8 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
   const maxRetries = 10;
   let hitPaginationLimit = false;
   let lastPage = page;
+  const SAVE_INTERVAL = 500;
+  let lastSaveCount = 0;
 
   console.log(`Fetching PRs${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'}...`);
 
@@ -458,6 +537,13 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
       lastPage = page;
       onProgress?.({ type: 'prs', fetched: prs.length + ((startPage - 1) * perPage), partial: false, page });
 
+      // Save progress incrementally
+      if (onSave && prs.length - lastSaveCount >= SAVE_INTERVAL) {
+        console.log(`Saving PRs progress: ${prs.length} items, page: ${lastPage}`);
+        await onSave({ type: 'prs', data: prs.slice(lastSaveCount), page: lastPage, hasMore: true });
+        lastSaveCount = prs.length;
+      }
+
       if (data.length < perPage) break;
       page++;
       retryCount = 0;
@@ -469,6 +555,9 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
       if (isPaginationLimitError(error)) {
         console.warn(`PRs: Hit pagination limit at page ${page} (${prs.length} items this run)`);
         hitPaginationLimit = true;
+        if (onSave && prs.length > lastSaveCount) {
+          await onSave({ type: 'prs', data: prs.slice(lastSaveCount), page: lastPage, hasMore: true });
+        }
         onProgress?.({ type: 'prs', fetched: prs.length + ((startPage - 1) * perPage), partial: true, page: lastPage });
         break;
       }
@@ -480,6 +569,12 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
 
       throw error;
     }
+  }
+
+  // Final save of any remaining data
+  if (onSave && prs.length > lastSaveCount) {
+    console.log(`Final save for PRs: ${prs.length - lastSaveCount} items`);
+    await onSave({ type: 'prs', data: prs.slice(lastSaveCount), page: lastPage, hasMore: false });
   }
 
   return {
@@ -542,7 +637,7 @@ export async function fetchAllContributors(octokit, owner, repo, onProgress) {
   return contributors;
 }
 
-export async function fetchContributorCommits(octokit, owner, repo, onProgress, sinceDate = null) {
+export async function fetchContributorCommits(octokit, owner, repo, onProgress, sinceDate = null, onSave = null) {
   const commits = [];
   let page = 1;
   const perPage = 100;
@@ -550,6 +645,8 @@ export async function fetchContributorCommits(octokit, owner, repo, onProgress, 
   const maxRetries = 10;
   let hitPaginationLimit = false;
   let lastDate = null;
+  const SAVE_INTERVAL = 500;
+  let lastSaveCount = 0;
 
   console.log(`Fetching commits${sinceDate ? ` since ${sinceDate}` : ' (full fetch)'}...`);
 
@@ -585,6 +682,13 @@ export async function fetchContributorCommits(octokit, owner, repo, onProgress, 
 
       onProgress?.({ type: 'commits', fetched: commits.length, partial: false });
 
+      // Save progress incrementally
+      if (onSave && commits.length - lastSaveCount >= SAVE_INTERVAL) {
+        console.log(`Saving commits progress: ${commits.length} items, lastDate: ${lastDate}`);
+        await onSave({ type: 'commits', data: commits.slice(lastSaveCount), lastDate, hasMore: true });
+        lastSaveCount = commits.length;
+      }
+
       if (data.length < perPage) break;
       page++;
       retryCount = 0;
@@ -596,6 +700,9 @@ export async function fetchContributorCommits(octokit, owner, repo, onProgress, 
       if (isPaginationLimitError(error)) {
         console.warn(`Commits: Hit pagination limit at ${commits.length} items`);
         hitPaginationLimit = true;
+        if (onSave && commits.length > lastSaveCount) {
+          await onSave({ type: 'commits', data: commits.slice(lastSaveCount), lastDate, hasMore: true });
+        }
         onProgress?.({ type: 'commits', fetched: commits.length, partial: true });
         break;
       }
@@ -607,6 +714,12 @@ export async function fetchContributorCommits(octokit, owner, repo, onProgress, 
 
       throw error;
     }
+  }
+
+  // Final save of any remaining data
+  if (onSave && commits.length > lastSaveCount) {
+    console.log(`Final save for commits: ${commits.length - lastSaveCount} items`);
+    await onSave({ type: 'commits', data: commits.slice(lastSaveCount), lastDate, hasMore: false });
   }
 
   return {
