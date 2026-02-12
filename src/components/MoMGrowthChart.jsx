@@ -50,9 +50,12 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
     // Sort months
     const sortedMonths = Array.from(allMonths).sort();
 
-    // Build merged data
+    // Build merged data with timestamp for proper time-based spacing
     return sortedMonths.map(month => {
-      const point = { month };
+      const point = {
+        month,
+        timestamp: new Date(month).getTime()
+      };
       selectedRepos.forEach(repoKey => {
         const data = repoData[repoKey] || [];
         const monthData = data.find(d => d.monthEnd === month);
@@ -93,6 +96,39 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
 
   const comparisonData = timeMode === 'indexed' ? getIndexedComparisonData() : getDateComparisonData();
 
+  // Calculate date range based on preset
+  const getDateRange = () => {
+    const today = new Date();
+    let start = null;
+    let end = today.toISOString().split('T')[0];
+
+    switch (datePreset) {
+      case '1m':
+        start = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '3m':
+        start = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '6m':
+        start = new Date(today.getFullYear(), today.getMonth() - 6, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '1y':
+        start = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()).toISOString().split('T')[0];
+        break;
+      case 'custom':
+        start = startDate || null;
+        end = endDate || today.toISOString().split('T')[0];
+        break;
+      case 'all':
+      default:
+        start = null;
+        end = null;
+        break;
+    }
+
+    return { start, end };
+  };
+
   const formatMonth = (dateStr) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
@@ -125,31 +161,97 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
     return formatWithCommas(value);
   };
 
-  // Calculate X-axis ticks (max 8)
-  const getXAxisTicks = () => {
+  // Get X-axis domain - use full selected date range for date mode
+  const getXAxisDomain = () => {
+    if (comparisonData.length === 0) return [1, 2];
+
     if (timeMode === 'indexed') {
-      // For indexed mode, start at 1 (need 1 month of data), increase increment if needed
-      const maxMonths = comparisonData.length;
-      let increment = 1;
-      while (Math.ceil(maxMonths / increment) > 8) {
-        increment += 1;
+      // For indexed mode, domain starts at 1 (need 1 month for MoM)
+      return [1, comparisonData.length];
+    }
+
+    const { start, end } = getDateRange();
+    const today = new Date();
+
+    let minTime, maxTime;
+
+    if (start) {
+      minTime = new Date(start).getTime();
+    } else {
+      // For 'all', use data min
+      const timestamps = comparisonData.map(d => d.timestamp);
+      minTime = Math.min(...timestamps);
+    }
+
+    if (end) {
+      maxTime = new Date(end).getTime();
+    } else {
+      maxTime = today.getTime();
+    }
+
+    return [minTime, maxTime];
+  };
+
+  // Calculate X-axis ticks with month-aligned spacing
+  const getXAxisTicks = () => {
+    if (comparisonData.length === 0) return [];
+
+    const [domainMin, domainMax] = getXAxisDomain();
+
+    if (timeMode === 'indexed') {
+      // For indexed mode, evenly space ticks from 1 to max
+      const range = domainMax - domainMin;
+      if (range <= 7) {
+        // Show all months if 8 or fewer
+        const ticks = [];
+        for (let i = domainMin; i <= domainMax; i++) {
+          ticks.push(i);
+        }
+        return ticks;
       }
+      // Determine month increment (2, 3, or 6 months)
+      let monthIncrement = 2;
+      if (range > 24) monthIncrement = 6;
+      else if (range > 12) monthIncrement = 3;
+
       const ticks = [];
-      for (let month = 1; month <= maxMonths; month += increment) {
-        ticks.push(month);
+      for (let i = domainMin; i <= domainMax; i += monthIncrement) {
+        ticks.push(i);
+      }
+      // Always include the end point
+      if (ticks[ticks.length - 1] < domainMax) {
+        ticks.push(domainMax);
       }
       return ticks;
     } else {
-      // For date mode, show all months if <= 8, otherwise evenly spaced
-      if (comparisonData.length <= 8) {
-        return comparisonData.map(d => d.month);
-      }
+      // For date mode, generate month-aligned ticks
+      const startDate = new Date(domainMin);
+      const endDate = new Date(domainMax);
+
+      // Calculate total months in range
+      const totalMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12
+        + (endDate.getMonth() - startDate.getMonth());
+
+      // Determine month increment (1, 2, 3, or 6 months)
+      let monthIncrement = 1;
+      if (totalMonths > 24) monthIncrement = 6;
+      else if (totalMonths > 12) monthIncrement = 3;
+      else if (totalMonths > 6) monthIncrement = 2;
+
       const ticks = [];
-      const step = (comparisonData.length - 1) / 7;
-      for (let i = 0; i < 8; i++) {
-        const index = Math.round(i * step);
-        ticks.push(comparisonData[index].month);
+      // Start from the first day of the start month
+      const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+      while (current.getTime() <= domainMax) {
+        ticks.push(current.getTime());
+        current.setMonth(current.getMonth() + monthIncrement);
       }
+
+      // Always include the end point
+      if (ticks[ticks.length - 1] < domainMax) {
+        ticks.push(domainMax);
+      }
+
       return ticks;
     }
   };
@@ -290,10 +392,13 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
           <LineChart data={comparisonData} key={`${datePreset}-${startDate}-${endDate}`}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
             <XAxis
-              dataKey={timeMode === 'indexed' ? 'monthIndex' : 'month'}
-              tickFormatter={timeMode === 'indexed' ? formatMonthIndex : formatMonth}
+              dataKey={timeMode === 'indexed' ? 'monthIndex' : 'timestamp'}
+              type="number"
+              domain={getXAxisDomain()}
+              tickFormatter={timeMode === 'indexed' ? formatMonthIndex : (ts) => formatMonth(new Date(ts).toISOString())}
               tick={{ fill: '#6B7280', fontSize: 11 }}
               ticks={getXAxisTicks()}
+              allowDataOverflow={true}
             />
             <YAxis
               domain={getYAxisDomain()}
@@ -312,7 +417,8 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
                 if (timeMode === 'indexed') {
                   return `Month ${label}`;
                 }
-                return formatMonth(label);
+                // label is now a timestamp
+                return formatMonth(new Date(label).toISOString());
               }}
               formatter={(value, name) => [formatValue(value), name]}
             />

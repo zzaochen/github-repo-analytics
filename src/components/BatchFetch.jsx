@@ -14,7 +14,8 @@ import { aggregateToDaily } from '../utils/dataAggregator';
 export default function BatchFetch({ token, onComplete }) {
   const [repoList, setRepoList] = useState('');
   const [isFetching, setIsFetching] = useState(false);
-  const [progress, setProgress] = useState({}); // { 'owner/repo': { status: 'pending' | 'fetching' | 'done' | 'error', message: '' } }
+  const [progress, setProgress] = useState({}); // { 'owner/repo': { status: 'pending' | 'fetching' | 'done' | 'error', message: '', errorDetails: '' } }
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
   const abortRef = useRef(false);
 
   const parseRepos = (text) => {
@@ -96,9 +97,32 @@ export default function BatchFetch({ token, onComplete }) {
 
     } catch (error) {
       console.error(`Error fetching ${repoPath}:`, error);
+
+      // Build detailed error message
+      let shortMessage = 'Failed';
+      let errorDetails = error.message || 'Unknown error';
+
+      // Check for common error types
+      if (error.status === 404) {
+        shortMessage = 'Not found';
+        errorDetails = `Repository "${repoPath}" not found. It may be private, deleted, or the name is incorrect.`;
+      } else if (error.status === 401 || error.status === 403) {
+        shortMessage = 'Auth error';
+        errorDetails = `Access denied (${error.status}). ${error.message || 'Check your GitHub token has the required permissions.'}`;
+      } else if (error.status === 429 || error.message?.toLowerCase().includes('rate limit')) {
+        shortMessage = 'Rate limited';
+        errorDetails = `GitHub API rate limit exceeded. ${error.message || 'Wait a few minutes and try again.'}`;
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        shortMessage = 'Network error';
+        errorDetails = `Network error: ${error.message}. Check your internet connection.`;
+      } else if (error.status) {
+        shortMessage = `Error ${error.status}`;
+        errorDetails = `HTTP ${error.status}: ${error.message || 'Unknown error'}`;
+      }
+
       setProgress(prev => ({
         ...prev,
-        [repoPath]: { status: 'error', message: error.message || 'Failed' }
+        [repoPath]: { status: 'error', message: shortMessage, errorDetails }
       }));
     }
   };
@@ -226,10 +250,37 @@ export default function BatchFetch({ token, onComplete }) {
         </div>
       )}
 
-      {isComplete && errorCount > 0 && (
-        <p className="text-xs text-red-600 mt-2">
-          {errorCount} {errorCount === 1 ? 'error' : 'errors'} occurred
-        </p>
+      {/* Error summary and details */}
+      {errorCount > 0 && (
+        <div className="mt-3 border-t border-gray-200 pt-3">
+          <button
+            onClick={() => setShowErrorDetails(!showErrorDetails)}
+            className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+          >
+            <span>{showErrorDetails ? '▼' : '▶'}</span>
+            <span>{errorCount} {errorCount === 1 ? 'error' : 'errors'} occurred</span>
+          </button>
+
+          {showErrorDetails && (
+            <div className="mt-2 space-y-2">
+              {Object.entries(progress)
+                .filter(([, p]) => p.status === 'error')
+                .map(([repo, { message, errorDetails }]) => (
+                  <div key={repo} className="bg-red-50 border border-red-200 rounded p-2">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-red-500 font-medium">{repo}</span>
+                      <span className="text-red-400">— {message}</span>
+                    </div>
+                    {errorDetails && (
+                      <p className="text-xs text-red-600 mt-1 break-words">
+                        {errorDetails}
+                      </p>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

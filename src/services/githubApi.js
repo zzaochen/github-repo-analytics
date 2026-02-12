@@ -1,6 +1,9 @@
 import { Octokit } from '@octokit/rest';
 import { graphql } from '@octokit/graphql';
 
+// Number of parallel requests to make (balance between speed and rate limits)
+const PARALLEL_REQUESTS = 5;
+
 export function createGitHubClient(token) {
   return new Octokit({ auth: token });
 }
@@ -11,6 +14,15 @@ export function createGraphQLClient(token) {
       authorization: `token ${token}`
     }
   });
+}
+
+// Helper to fetch multiple pages in parallel
+async function fetchPagesInParallel(fetchFn, startPage, numPages) {
+  const promises = [];
+  for (let i = 0; i < numPages; i++) {
+    promises.push(fetchFn(startPage + i));
+  }
+  return Promise.allSettled(promises);
 }
 
 export async function fetchRepoInfo(octokit, owner, repo) {
@@ -311,19 +323,19 @@ export async function fetchAllStargazers(octokit, owner, repo, onProgress, since
 
 export async function fetchAllForks(octokit, owner, repo, onProgress, startPage = 1, onSave = null) {
   const forks = [];
-  let page = startPage;
+  let currentPage = startPage;
   const perPage = 100;
-  let retryCount = 0;
-  const maxRetries = 10;
   let hitPaginationLimit = false;
-  let lastPage = page;
-  const SAVE_INTERVAL = 500;
+  let lastPage = currentPage;
+  const SAVE_INTERVAL = 1000;
   let lastSaveCount = 0;
+  let hasMore = true;
 
-  console.log(`Fetching forks${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'}...`);
+  console.log(`Fetching forks${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'} with ${PARALLEL_REQUESTS}x parallelism...`);
 
-  while (retryCount < maxRetries) {
-    try {
+  while (hasMore) {
+    // Fetch multiple pages in parallel
+    const fetchPage = async (page) => {
       const { data, headers } = await octokit.repos.listForks({
         owner,
         repo,
@@ -331,56 +343,89 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
         page,
         sort: 'oldest'
       });
+      return { data, headers, page };
+    };
 
-      if (data.length === 0) break;
+    try {
+      const results = await fetchPagesInParallel(fetchPage, currentPage, PARALLEL_REQUESTS);
 
-      for (const f of data) {
-        forks.push({
-          owner: f.owner.login,
-          createdAt: f.created_at
-        });
+      let gotEmptyPage = false;
+      let gotPartialPage = false;
+      let lowestRateLimit = Infinity;
+      let rateLimitHeaders = null;
+
+      // Process results in order
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'rejected') {
+          const error = result.reason;
+          if (isPaginationLimitError(error)) {
+            hitPaginationLimit = true;
+            gotEmptyPage = true;
+            break;
+          }
+          if (isRateLimitError(error)) {
+            await handleRateLimit(error, onProgress, 'forks', forks.length);
+            // Don't break, we'll retry this batch
+            gotEmptyPage = true;
+            break;
+          }
+          console.error(`Error fetching forks page:`, error.message);
+          continue;
+        }
+
+        const { data, headers, page } = result.value;
+
+        if (data.length === 0) {
+          gotEmptyPage = true;
+          break;
+        }
+
+        for (const f of data) {
+          forks.push({
+            owner: f.owner.login,
+            createdAt: f.created_at
+          });
+        }
+
+        lastPage = page;
+
+        // Track rate limit
+        const remaining = parseInt(headers['x-ratelimit-remaining'] || '100');
+        if (remaining < lowestRateLimit) {
+          lowestRateLimit = remaining;
+          rateLimitHeaders = headers;
+        }
+
+        if (data.length < perPage) {
+          gotPartialPage = true;
+        }
       }
 
-      lastPage = page;
-      onProgress?.({ type: 'forks', fetched: forks.length + ((startPage - 1) * perPage), partial: false, page });
+      onProgress?.({ type: 'forks', fetched: forks.length + ((startPage - 1) * perPage), partial: false, page: lastPage });
 
       // Save progress incrementally
       if (onSave && forks.length - lastSaveCount >= SAVE_INTERVAL) {
         console.log(`Saving forks progress: ${forks.length} items, page: ${lastPage}`);
-        await onSave({
-          type: 'forks',
-          data: forks.slice(lastSaveCount),
-          page: lastPage,
-          hasMore: true
-        });
+        await onSave({ type: 'forks', data: forks.slice(lastSaveCount), page: lastPage, hasMore: true });
         lastSaveCount = forks.length;
       }
 
-      if (data.length < perPage) break;
-      page++;
-      retryCount = 0;
-
-      await checkRateLimit(headers, onProgress, 'forks', forks.length);
-    } catch (error) {
-      console.error(`Error fetching forks (page ${page}):`, error.message);
-
-      if (isPaginationLimitError(error)) {
-        console.warn(`Forks: Hit pagination limit at page ${page} (${forks.length} items this run)`);
-        hitPaginationLimit = true;
-        // Save remaining data before breaking
-        if (onSave && forks.length > lastSaveCount) {
-          await onSave({ type: 'forks', data: forks.slice(lastSaveCount), page: lastPage, hasMore: true });
+      if (gotEmptyPage || gotPartialPage || hitPaginationLimit) {
+        hasMore = false;
+      } else {
+        currentPage += PARALLEL_REQUESTS;
+        // Check rate limit before next batch
+        if (rateLimitHeaders) {
+          await checkRateLimit(rateLimitHeaders, onProgress, 'forks', forks.length);
         }
-        onProgress?.({ type: 'forks', fetched: forks.length + ((startPage - 1) * perPage), partial: true, page: lastPage });
-        break;
       }
-
-      if (await handleRateLimit(error, onProgress, 'forks', forks.length)) {
-        retryCount++;
-        continue;
+    } catch (error) {
+      console.error(`Error in parallel forks fetch:`, error.message);
+      if (isPaginationLimitError(error)) {
+        hitPaginationLimit = true;
       }
-
-      throw error;
+      hasMore = false;
     }
   }
 
@@ -400,19 +445,18 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
 
 export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate = null, onSave = null) {
   const issues = [];
-  let page = 1;
+  let currentPage = 1;
   const perPage = 100;
-  let retryCount = 0;
-  const maxRetries = 10;
   let hitPaginationLimit = false;
   let lastDate = null;
-  const SAVE_INTERVAL = 500;
+  const SAVE_INTERVAL = 1000;
   let lastSaveCount = 0;
+  let hasMore = true;
 
-  console.log(`Fetching issues${sinceDate ? ` since ${sinceDate}` : ' (full fetch)'}...`);
+  console.log(`Fetching issues${sinceDate ? ` since ${sinceDate}` : ' (full fetch)'} with ${PARALLEL_REQUESTS}x parallelism...`);
 
-  while (retryCount < maxRetries) {
-    try {
+  while (hasMore) {
+    const fetchPage = async (page) => {
       const params = {
         owner,
         repo,
@@ -422,65 +466,92 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
         sort: 'created',
         direction: 'asc'
       };
-
-      // Use 'since' parameter for incremental fetch
       if (sinceDate) {
         params.since = new Date(sinceDate).toISOString();
       }
-
       const { data, headers } = await octokit.issues.listForRepo(params);
+      return { data, headers, page };
+    };
 
-      if (data.length === 0) break;
+    try {
+      const results = await fetchPagesInParallel(fetchPage, currentPage, PARALLEL_REQUESTS);
 
-      const realIssues = data.filter(i => !i.pull_request);
+      let gotEmptyPage = false;
+      let gotPartialPage = false;
+      let lowestRateLimit = Infinity;
+      let rateLimitHeaders = null;
 
-      for (const i of realIssues) {
-        issues.push({
-          number: i.number,
-          state: i.state,
-          createdAt: i.created_at,
-          closedAt: i.closed_at
-        });
-        // Track the latest date we've seen
-        const issueDate = i.created_at.split('T')[0];
-        if (!lastDate || issueDate > lastDate) {
-          lastDate = issueDate;
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'rejected') {
+          const error = result.reason;
+          if (isPaginationLimitError(error)) {
+            hitPaginationLimit = true;
+            gotEmptyPage = true;
+            break;
+          }
+          if (isRateLimitError(error)) {
+            await handleRateLimit(error, onProgress, 'issues', issues.length);
+            gotEmptyPage = true;
+            break;
+          }
+          continue;
+        }
+
+        const { data, headers } = result.value;
+
+        if (data.length === 0) {
+          gotEmptyPage = true;
+          break;
+        }
+
+        const realIssues = data.filter(i => !i.pull_request);
+        for (const i of realIssues) {
+          issues.push({
+            number: i.number,
+            state: i.state,
+            createdAt: i.created_at,
+            closedAt: i.closed_at
+          });
+          const issueDate = i.created_at.split('T')[0];
+          if (!lastDate || issueDate > lastDate) {
+            lastDate = issueDate;
+          }
+        }
+
+        const remaining = parseInt(headers['x-ratelimit-remaining'] || '100');
+        if (remaining < lowestRateLimit) {
+          lowestRateLimit = remaining;
+          rateLimitHeaders = headers;
+        }
+
+        if (data.length < perPage) {
+          gotPartialPage = true;
         }
       }
 
       onProgress?.({ type: 'issues', fetched: issues.length, partial: false });
 
-      // Save progress incrementally
       if (onSave && issues.length - lastSaveCount >= SAVE_INTERVAL) {
         console.log(`Saving issues progress: ${issues.length} items, lastDate: ${lastDate}`);
         await onSave({ type: 'issues', data: issues.slice(lastSaveCount), lastDate, hasMore: true });
         lastSaveCount = issues.length;
       }
 
-      if (data.length < perPage) break;
-      page++;
-      retryCount = 0;
-
-      await checkRateLimit(headers, onProgress, 'issues', issues.length);
-    } catch (error) {
-      console.error(`Error fetching issues (page ${page}):`, error.message);
-
-      if (isPaginationLimitError(error)) {
-        console.warn(`Issues: Hit pagination limit at ${issues.length} items`);
-        hitPaginationLimit = true;
-        if (onSave && issues.length > lastSaveCount) {
-          await onSave({ type: 'issues', data: issues.slice(lastSaveCount), lastDate, hasMore: true });
+      if (gotEmptyPage || gotPartialPage || hitPaginationLimit) {
+        hasMore = false;
+      } else {
+        currentPage += PARALLEL_REQUESTS;
+        if (rateLimitHeaders) {
+          await checkRateLimit(rateLimitHeaders, onProgress, 'issues', issues.length);
         }
-        onProgress?.({ type: 'issues', fetched: issues.length, partial: true });
-        break;
       }
-
-      if (await handleRateLimit(error, onProgress, 'issues', issues.length)) {
-        retryCount++;
-        continue;
+    } catch (error) {
+      console.error(`Error in parallel issues fetch:`, error.message);
+      if (isPaginationLimitError(error)) {
+        hitPaginationLimit = true;
       }
-
-      throw error;
+      hasMore = false;
     }
   }
 
@@ -499,19 +570,18 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
 
 export async function fetchAllPullRequests(octokit, owner, repo, onProgress, startPage = 1, onSave = null) {
   const prs = [];
-  let page = startPage;
+  let currentPage = startPage;
   const perPage = 100;
-  let retryCount = 0;
-  const maxRetries = 10;
   let hitPaginationLimit = false;
-  let lastPage = page;
+  let lastPage = currentPage;
   const SAVE_INTERVAL = 500;
   let lastSaveCount = 0;
+  let hasMore = true;
 
-  console.log(`Fetching PRs${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'}...`);
+  console.log(`Fetching PRs${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'} with ${PARALLEL_REQUESTS}x parallelism...`);
 
-  while (retryCount < maxRetries) {
-    try {
+  while (hasMore) {
+    const fetchPage = async (page) => {
       const { data, headers } = await octokit.pulls.list({
         owner,
         repo,
@@ -521,53 +591,86 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
         sort: 'created',
         direction: 'asc'
       });
+      return { data, headers, page };
+    };
 
-      if (data.length === 0) break;
+    try {
+      const results = await fetchPagesInParallel(fetchPage, currentPage, PARALLEL_REQUESTS);
 
-      for (const pr of data) {
-        prs.push({
-          number: pr.number,
-          state: pr.state,
-          createdAt: pr.created_at,
-          closedAt: pr.closed_at,
-          mergedAt: pr.merged_at
-        });
+      let gotEmptyPage = false;
+      let gotPartialPage = false;
+      let lowestRateLimit = Infinity;
+      let rateLimitHeaders = null;
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'rejected') {
+          const error = result.reason;
+          if (isPaginationLimitError(error)) {
+            hitPaginationLimit = true;
+            gotEmptyPage = true;
+            break;
+          }
+          if (isRateLimitError(error)) {
+            await handleRateLimit(error, onProgress, 'prs', prs.length);
+            gotEmptyPage = true;
+            break;
+          }
+          continue;
+        }
+
+        const { data, headers, page } = result.value;
+
+        if (data.length === 0) {
+          gotEmptyPage = true;
+          break;
+        }
+
+        for (const pr of data) {
+          prs.push({
+            number: pr.number,
+            state: pr.state,
+            createdAt: pr.created_at,
+            closedAt: pr.closed_at,
+            mergedAt: pr.merged_at
+          });
+        }
+
+        lastPage = page;
+
+        const remaining = parseInt(headers['x-ratelimit-remaining'] || '100');
+        if (remaining < lowestRateLimit) {
+          lowestRateLimit = remaining;
+          rateLimitHeaders = headers;
+        }
+
+        if (data.length < perPage) {
+          gotPartialPage = true;
+        }
       }
 
-      lastPage = page;
-      onProgress?.({ type: 'prs', fetched: prs.length + ((startPage - 1) * perPage), partial: false, page });
+      onProgress?.({ type: 'prs', fetched: prs.length + ((startPage - 1) * perPage), partial: false, page: lastPage });
 
-      // Save progress incrementally
       if (onSave && prs.length - lastSaveCount >= SAVE_INTERVAL) {
         console.log(`Saving PRs progress: ${prs.length} items, page: ${lastPage}`);
         await onSave({ type: 'prs', data: prs.slice(lastSaveCount), page: lastPage, hasMore: true });
         lastSaveCount = prs.length;
       }
 
-      if (data.length < perPage) break;
-      page++;
-      retryCount = 0;
-
-      await checkRateLimit(headers, onProgress, 'prs', prs.length);
-    } catch (error) {
-      console.error(`Error fetching PRs (page ${page}):`, error.message);
-
-      if (isPaginationLimitError(error)) {
-        console.warn(`PRs: Hit pagination limit at page ${page} (${prs.length} items this run)`);
-        hitPaginationLimit = true;
-        if (onSave && prs.length > lastSaveCount) {
-          await onSave({ type: 'prs', data: prs.slice(lastSaveCount), page: lastPage, hasMore: true });
+      if (gotEmptyPage || gotPartialPage || hitPaginationLimit) {
+        hasMore = false;
+      } else {
+        currentPage += PARALLEL_REQUESTS;
+        if (rateLimitHeaders) {
+          await checkRateLimit(rateLimitHeaders, onProgress, 'prs', prs.length);
         }
-        onProgress?.({ type: 'prs', fetched: prs.length + ((startPage - 1) * perPage), partial: true, page: lastPage });
-        break;
       }
-
-      if (await handleRateLimit(error, onProgress, 'prs', prs.length)) {
-        retryCount++;
-        continue;
+    } catch (error) {
+      console.error(`Error in parallel PRs fetch:`, error.message);
+      if (isPaginationLimitError(error)) {
+        hitPaginationLimit = true;
       }
-
-      throw error;
+      hasMore = false;
     }
   }
 
@@ -639,80 +742,108 @@ export async function fetchAllContributors(octokit, owner, repo, onProgress) {
 
 export async function fetchContributorCommits(octokit, owner, repo, onProgress, sinceDate = null, onSave = null) {
   const commits = [];
-  let page = 1;
+  let currentPage = 1;
   const perPage = 100;
-  let retryCount = 0;
-  const maxRetries = 10;
   let hitPaginationLimit = false;
   let lastDate = null;
   const SAVE_INTERVAL = 500;
   let lastSaveCount = 0;
+  let hasMore = true;
 
-  console.log(`Fetching commits${sinceDate ? ` since ${sinceDate}` : ' (full fetch)'}...`);
+  console.log(`Fetching commits${sinceDate ? ` since ${sinceDate}` : ' (full fetch)'} with ${PARALLEL_REQUESTS}x parallelism...`);
 
-  while (retryCount < maxRetries) {
-    try {
+  while (hasMore) {
+    const fetchPage = async (page) => {
       const params = {
         owner,
         repo,
         per_page: perPage,
         page
       };
-
       if (sinceDate) {
         params.since = new Date(sinceDate).toISOString();
       }
-
       const { data, headers } = await octokit.repos.listCommits(params);
+      return { data, headers, page };
+    };
 
-      if (data.length === 0) break;
+    try {
+      const results = await fetchPagesInParallel(fetchPage, currentPage, PARALLEL_REQUESTS);
 
-      for (const c of data) {
-        commits.push({
-          sha: c.sha,
-          author: c.author?.login || c.commit?.author?.name,
-          date: c.commit.author.date
-        });
-        // Track the latest date we've seen
-        const commitDate = c.commit.author.date.split('T')[0];
-        if (!lastDate || commitDate > lastDate) {
-          lastDate = commitDate;
+      let gotEmptyPage = false;
+      let gotPartialPage = false;
+      let lowestRateLimit = Infinity;
+      let rateLimitHeaders = null;
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'rejected') {
+          const error = result.reason;
+          if (isPaginationLimitError(error)) {
+            hitPaginationLimit = true;
+            gotEmptyPage = true;
+            break;
+          }
+          if (isRateLimitError(error)) {
+            await handleRateLimit(error, onProgress, 'commits', commits.length);
+            gotEmptyPage = true;
+            break;
+          }
+          continue;
+        }
+
+        const { data, headers } = result.value;
+
+        if (data.length === 0) {
+          gotEmptyPage = true;
+          break;
+        }
+
+        for (const c of data) {
+          commits.push({
+            sha: c.sha,
+            author: c.author?.login || c.commit?.author?.name,
+            date: c.commit.author.date
+          });
+          const commitDate = c.commit.author.date.split('T')[0];
+          if (!lastDate || commitDate > lastDate) {
+            lastDate = commitDate;
+          }
+        }
+
+        const remaining = parseInt(headers['x-ratelimit-remaining'] || '100');
+        if (remaining < lowestRateLimit) {
+          lowestRateLimit = remaining;
+          rateLimitHeaders = headers;
+        }
+
+        if (data.length < perPage) {
+          gotPartialPage = true;
         }
       }
 
       onProgress?.({ type: 'commits', fetched: commits.length, partial: false });
 
-      // Save progress incrementally
       if (onSave && commits.length - lastSaveCount >= SAVE_INTERVAL) {
         console.log(`Saving commits progress: ${commits.length} items, lastDate: ${lastDate}`);
         await onSave({ type: 'commits', data: commits.slice(lastSaveCount), lastDate, hasMore: true });
         lastSaveCount = commits.length;
       }
 
-      if (data.length < perPage) break;
-      page++;
-      retryCount = 0;
-
-      await checkRateLimit(headers, onProgress, 'commits', commits.length);
-    } catch (error) {
-      console.error(`Error fetching commits (page ${page}):`, error.message);
-
-      if (isPaginationLimitError(error)) {
-        console.warn(`Commits: Hit pagination limit at ${commits.length} items`);
-        hitPaginationLimit = true;
-        if (onSave && commits.length > lastSaveCount) {
-          await onSave({ type: 'commits', data: commits.slice(lastSaveCount), lastDate, hasMore: true });
+      if (gotEmptyPage || gotPartialPage || hitPaginationLimit) {
+        hasMore = false;
+      } else {
+        currentPage += PARALLEL_REQUESTS;
+        if (rateLimitHeaders) {
+          await checkRateLimit(rateLimitHeaders, onProgress, 'commits', commits.length);
         }
-        onProgress?.({ type: 'commits', fetched: commits.length, partial: true });
-        break;
       }
-
-      if (await handleRateLimit(error, onProgress, 'commits', commits.length)) {
-        retryCount++;
-        continue;
+    } catch (error) {
+      console.error(`Error in parallel commits fetch:`, error.message);
+      if (isPaginationLimitError(error)) {
+        hitPaginationLimit = true;
       }
-
-      throw error;
+      hasMore = false;
     }
   }
 

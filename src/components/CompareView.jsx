@@ -194,9 +194,12 @@ export default function CompareView() {
     // Sort dates
     const sortedDates = Array.from(allDates).sort();
 
-    // Build merged data
+    // Build merged data with timestamp for proper time-based spacing
     return sortedDates.map(date => {
-      const point = { date };
+      const point = {
+        date,
+        timestamp: new Date(date).getTime()
+      };
       selectedRepos.forEach(repoKey => {
         const data = filteredRepoData[repoKey] || [];
         const dayData = data.find(d => d.date === date);
@@ -247,11 +250,15 @@ export default function CompareView() {
     return `${months}mo`;
   };
 
-  // Calculate tick indices
+  // Calculate tick indices with month-aligned spacing
   const getXAxisTicks = () => {
+    if (comparisonData.length === 0) return [];
+
+    const [domainMin, domainMax] = getXAxisDomain();
+
     if (viewMode === 'indexed') {
       // For indexed mode, show months in multiples of 3, max 8 ticks
-      const maxDays = comparisonData.length - 1;
+      const maxDays = domainMax;
       const totalMonths = Math.ceil(maxDays / 30);
 
       // Find increment (multiple of 3) that gives us <= 8 ticks
@@ -266,18 +273,70 @@ export default function CompareView() {
       }
       return ticks;
     } else {
-      // For date mode, show 8 evenly spaced dates
-      if (comparisonData.length <= 8) {
-        return comparisonData.map(d => d.date);
-      }
+      // For date mode, generate month-aligned ticks
+      const startDate = new Date(domainMin);
+      const endDate = new Date(domainMax);
+
+      // Calculate total months in range
+      const totalMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12
+        + (endDate.getMonth() - startDate.getMonth());
+
+      // Determine month increment (1, 2, 3, or 6 months)
+      let monthIncrement = 1;
+      if (totalMonths > 24) monthIncrement = 6;
+      else if (totalMonths > 12) monthIncrement = 3;
+      else if (totalMonths > 6) monthIncrement = 2;
+
       const ticks = [];
-      const step = (comparisonData.length - 1) / 7;
-      for (let i = 0; i < 8; i++) {
-        const index = Math.round(i * step);
-        ticks.push(comparisonData[index].date);
+      // Start from the first day of the start month
+      const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+      while (current.getTime() <= domainMax) {
+        ticks.push(current.getTime());
+        current.setMonth(current.getMonth() + monthIncrement);
       }
+
+      // Always include the end point
+      if (ticks[ticks.length - 1] < domainMax) {
+        ticks.push(domainMax);
+      }
+
       return ticks;
     }
+  };
+
+  // Get X-axis domain - use full selected date range for date mode
+  const getXAxisDomain = () => {
+    if (comparisonData.length === 0) return [0, 1];
+
+    if (viewMode === 'indexed') {
+      // For indexed mode, domain is 0 to max day index
+      return [0, comparisonData.length - 1];
+    }
+
+    // Get the selected date range
+    const { start, end } = getDateRange(metricsDatePreset, metricsStartDate, metricsEndDate);
+    const today = new Date();
+
+    // Use selected range or fall back to data range
+    let minTime, maxTime;
+
+    if (start) {
+      minTime = new Date(start).getTime();
+    } else {
+      // For 'all', use data min
+      const timestamps = comparisonData.map(d => d.timestamp);
+      minTime = Math.min(...timestamps);
+    }
+
+    if (end) {
+      maxTime = new Date(end).getTime();
+    } else {
+      // Use today as the end
+      maxTime = today.getTime();
+    }
+
+    return [minTime, maxTime];
   };
 
   const formatNumber = (num) => {
@@ -538,10 +597,13 @@ export default function CompareView() {
               <LineChart data={comparisonData} key={`${metricsDatePreset}-${metricsStartDate}-${metricsEndDate}`}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis
-                  dataKey={viewMode === 'indexed' ? 'dayIndex' : 'date'}
-                  tickFormatter={viewMode === 'indexed' ? formatDayIndex : formatDate}
+                  dataKey={viewMode === 'indexed' ? 'dayIndex' : 'timestamp'}
+                  type="number"
+                  domain={getXAxisDomain()}
+                  tickFormatter={viewMode === 'indexed' ? formatDayIndex : (ts) => formatDate(new Date(ts).toISOString())}
                   tick={{ fill: '#6B7280', fontSize: 11 }}
                   ticks={getXAxisTicks()}
+                  allowDataOverflow={true}
                 />
                 <YAxis
                   domain={getYAxisDomain()}
@@ -564,6 +626,7 @@ export default function CompareView() {
                       if (days === 0) return `${months} month${months > 1 ? 's' : ''}`;
                       return `${months} month${months > 1 ? 's' : ''}, ${days} day${days > 1 ? 's' : ''}`;
                     }
+                    // label is now a timestamp
                     return new Date(label).toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
