@@ -132,13 +132,23 @@ export default function BatchFetch({ token, onComplete }) {
   const repos = parseRepos(repoList);
   const completedCount = Object.values(progress).filter(p => p.status === 'done').length;
   const errorCount = Object.values(progress).filter(p => p.status === 'error').length;
+  const totalInProgress = Object.keys(progress).length;
+  const isComplete = !isFetching && totalInProgress > 0 && completedCount + errorCount === totalInProgress;
+
+  const handleClearProgress = () => {
+    setProgress({});
+    setRepoList('');
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-700">Batch Fetch</h3>
         {isFetching && (
-          <span className="text-xs text-blue-600">{completedCount}/{Object.keys(progress).length}</span>
+          <span className="text-xs text-blue-600">{completedCount}/{totalInProgress}</span>
+        )}
+        {isComplete && (
+          <span className="text-xs text-green-600">{completedCount}/{totalInProgress} complete</span>
         )}
       </div>
       <p className="text-xs text-gray-500 mb-2">
@@ -157,22 +167,32 @@ export default function BatchFetch({ token, onComplete }) {
         <span className="text-xs text-gray-500">
           {repos.length} {repos.length === 1 ? 'repository' : 'repositories'}
         </span>
-        {!isFetching ? (
-          <button
-            onClick={handleStartFetch}
-            disabled={repos.length === 0 || !token}
-            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs transition-colors"
-          >
-            Fetch All
-          </button>
-        ) : (
-          <button
-            onClick={handleCancel}
-            className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors"
-          >
-            Cancel
-          </button>
-        )}
+        <div className="flex gap-2">
+          {isComplete && (
+            <button
+              onClick={handleClearProgress}
+              className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs transition-colors"
+            >
+              Clear
+            </button>
+          )}
+          {!isFetching ? (
+            <button
+              onClick={handleStartFetch}
+              disabled={repos.length === 0 || !token}
+              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs transition-colors"
+            >
+              Fetch All
+            </button>
+          ) : (
+            <button
+              onClick={handleCancel}
+              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Progress list */}
@@ -206,9 +226,9 @@ export default function BatchFetch({ token, onComplete }) {
         </div>
       )}
 
-      {!isFetching && completedCount > 0 && (
-        <p className="text-xs text-green-600 mt-2">
-          Completed: {completedCount} repos{errorCount > 0 && `, ${errorCount} errors`}
+      {isComplete && errorCount > 0 && (
+        <p className="text-xs text-red-600 mt-2">
+          {errorCount} {errorCount === 1 ? 'error' : 'errors'} occurred
         </p>
       )}
     </div>
