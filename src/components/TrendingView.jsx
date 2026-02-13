@@ -22,6 +22,7 @@ export default function TrendingView({ token }) {
   const [fetchProgress, setFetchProgress] = useState({}); // { 'owner/repo': { status, message } }
   const [autoFetchEnabled, setAutoFetchEnabled] = useState(false);
   const [discoveryDates, setDiscoveryDates] = useState({}); // { 'owner/repo': Date }
+  const [skippedRepos, setSkippedRepos] = useState(new Set()); // Track skipped repos
 
   const checkTrending = async () => {
     setLoading(true);
@@ -334,6 +335,7 @@ export default function TrendingView({ token }) {
                             <span className="text-red-600">✗ {progress.message}</span>
                             <button
                               onClick={() => {
+                                setSkippedRepos(prev => new Set([...prev, repo.fullName]));
                                 setNewRepos(prev => prev.filter(r => r.fullName !== repo.fullName));
                                 setFetchProgress(prev => {
                                   const updated = { ...prev };
@@ -388,7 +390,9 @@ export default function TrendingView({ token }) {
               </thead>
               <tbody>
                 {trendingRepos.map((repo, index) => {
-                  const isCached = !newRepos.find(r => r.fullName === repo.fullName);
+                  const isSkipped = skippedRepos.has(repo.fullName);
+                  const isNew = newRepos.find(r => r.fullName === repo.fullName);
+                  const isCached = !isNew && !isSkipped;
                   return (
                     <tr key={repo.fullName} className="border-b border-gray-100">
                       <td className="py-2 text-gray-400">{index + 1}</td>
@@ -408,7 +412,11 @@ export default function TrendingView({ token }) {
                         +{formatNumber(repo.starsGained)}
                       </td>
                       <td className="py-2 text-right">
-                        {isCached ? (
+                        {isSkipped ? (
+                          <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">
+                            Skipped
+                          </span>
+                        ) : isCached ? (
                           <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
                             Cached
                           </span>
