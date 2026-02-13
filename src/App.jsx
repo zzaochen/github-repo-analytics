@@ -422,7 +422,14 @@ function App() {
             return; // Skip API calls, finally block will still run
           }
 
-          const resumeState = {
+          // Use full fetch state from cache for incremental updates
+          const resumeState = cached?.fetchState ? {
+            stars: cached.fetchState.stars,
+            forks: cached.fetchState.forks,
+            prs: cached.fetchState.prs,
+            issues: { lastDate: cached.lastDate },
+            commits: { lastDate: cached.lastDate }
+          } : {
             issues: { lastDate: cached?.lastDate },
             commits: { lastDate: cached?.lastDate }
           };
