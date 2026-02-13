@@ -389,7 +389,7 @@ export default function TrendingView({ token }) {
                 </tr>
               </thead>
               <tbody>
-                {trendingRepos.map((repo, index) => {
+                {[...trendingRepos].sort((a, b) => b.starsGained - a.starsGained).map((repo, index) => {
                   const isSkipped = skippedRepos.has(repo.fullName);
                   const isNew = newRepos.find(r => r.fullName === repo.fullName);
                   const isCached = !isNew && !isSkipped;
