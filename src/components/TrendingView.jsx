@@ -183,8 +183,13 @@ export default function TrendingView({ token }) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">GitHub Weekly Trending</h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 mb-2">
               Discover this week's trending repositories and auto-fetch their data
+            </p>
+            <p className="text-xs text-gray-400">
+              <span className="font-medium">How repos trend:</span> GitHub doesn't publish their algorithm, but trending is based on
+              star velocity (stars gained vs. historical average), engagement (forks, issues, PRs), and activity spikes.
+              Repos typically need 30-50+ stars in a short period to appear.
             </p>
           </div>
           <div className="flex items-center gap-3">
