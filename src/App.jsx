@@ -400,11 +400,13 @@ function App() {
       const CONCURRENT_REFRESHES = 10;
       const repoQueue = [...repos];
       let completed = 0;
+      let skipped = 0;
       const activeRepos = new Set();
 
       const updateProgressDisplay = () => {
         const active = Array.from(activeRepos).join(', ');
-        setRefreshProgress(`Updating: ${active || 'starting...'} (${completed}/${repos.length} done)`);
+        const skippedText = skipped > 0 ? `, ${skipped} skipped` : '';
+        setRefreshProgress(`Updating: ${active || 'starting...'} (${completed}/${repos.length} done${skippedText})`);
       };
 
       const refreshRepo = async (repo) => {
@@ -414,6 +416,15 @@ function App() {
 
         try {
           const cached = await getRepoFromCache(repo.owner, repo.repo);
+
+          // Skip if already up to date (last data is from today)
+          const today = new Date().toISOString().split('T')[0];
+          if (cached?.lastDate === today) {
+            console.log(`Skipping ${repoName} - already up to date`);
+            skipped++;
+            return; // Skip API calls, finally block will still run
+          }
+
           const resumeState = {
             issues: { lastDate: cached?.lastDate },
             commits: { lastDate: cached?.lastDate }
