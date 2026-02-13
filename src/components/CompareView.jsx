@@ -437,7 +437,8 @@ export default function CompareView() {
                     .filter(repo => {
                       const repoKey = `${repo.owner}/${repo.repo}`.toLowerCase();
                       return repoKey.includes(repoSearchTerm.toLowerCase());
-                    });
+                    })
+                    .sort((a, b) => `${a.owner}/${a.repo}`.localeCompare(`${b.owner}/${b.repo}`));
 
                   if (availableRepos.length > 0) {
                     return (

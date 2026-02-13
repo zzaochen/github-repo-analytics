@@ -30,10 +30,12 @@ export default function CachedRepos({ onSelect, isLoading }) {
     setLoading(false);
   };
 
-  const filteredRepos = repos.filter(repo => {
-    const repoKey = `${repo.owner}/${repo.repo}`.toLowerCase();
-    return repoKey.includes(searchTerm.toLowerCase());
-  });
+  const filteredRepos = repos
+    .filter(repo => {
+      const repoKey = `${repo.owner}/${repo.repo}`.toLowerCase();
+      return repoKey.includes(searchTerm.toLowerCase());
+    })
+    .sort((a, b) => `${a.owner}/${a.repo}`.localeCompare(`${b.owner}/${b.repo}`));
 
   const handleSelect = (repo) => {
     onSelect(repo.owner, repo.repo);
