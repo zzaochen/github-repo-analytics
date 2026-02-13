@@ -159,14 +159,38 @@ export default function TrendingView({ token }) {
     } catch (err) {
       console.error(`Error fetching ${repoPath}:`, err);
 
-      // Categorize errors for better user feedback
+      // Check if rate limited - wait and retry
+      const isRateLimit = err.status === 403 || err.status === 429 ||
+        err.message?.toLowerCase().includes('rate limit');
+
+      if (isRateLimit) {
+        // Get reset time from headers if available
+        const resetTime = err.response?.headers?.['x-ratelimit-reset'];
+        let waitMs = 60000; // Default 1 minute
+
+        if (resetTime) {
+          waitMs = Math.max(0, (parseInt(resetTime) * 1000) - Date.now()) + 5000;
+        }
+
+        const waitMins = Math.ceil(waitMs / 60000);
+        setFetchProgress(prev => ({
+          ...prev,
+          [repoPath]: { status: 'fetching', message: `Rate limited - waiting ${waitMins}m...` }
+        }));
+
+        // Wait for rate limit reset
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+
+        // Retry
+        return fetchSingleRepo(repoPath);
+      }
+
+      // Categorize other errors
       let errorMessage = err.message || 'Failed';
       if (err.status === 404 || err.message?.includes('Not Found')) {
         errorMessage = 'Repo not found (deleted/renamed/private)';
-      } else if (err.status === 403 || err.status === 401) {
+      } else if (err.status === 401) {
         errorMessage = 'Access denied (check token permissions)';
-      } else if (err.status === 429) {
-        errorMessage = 'Rate limited - try again later';
       }
 
       setFetchProgress(prev => ({
@@ -186,8 +210,8 @@ export default function TrendingView({ token }) {
     });
     setFetchProgress(initialProgress);
 
-    // Fetch in parallel batches (3 concurrent to balance speed vs rate limits)
-    const CONCURRENT_FETCHES = 3;
+    // Fetch in parallel (aggressive - will wait for rate limit reset if hit)
+    const CONCURRENT_FETCHES = 10;
     const reposCopy = [...newRepos];
 
     const fetchNext = async () => {
