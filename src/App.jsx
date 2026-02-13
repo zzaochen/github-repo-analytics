@@ -400,17 +400,13 @@ function App() {
       const CONCURRENT_REFRESHES = 10;
       const repoQueue = [...repos];
       let completed = 0;
-      const activeRepos = new Set();
 
       const updateProgressDisplay = () => {
-        const active = Array.from(activeRepos).join(', ');
-        setRefreshProgress(`Updating: ${active || 'starting...'} (${completed}/${repos.length} done)`);
+        setRefreshProgress(`Updating repos... (${completed}/${repos.length} done)`);
       };
 
       const refreshRepo = async (repo) => {
         const repoName = `${repo.owner}/${repo.repo}`;
-        activeRepos.add(repoName);
-        updateProgressDisplay();
 
         try {
           const cached = await getRepoFromCache(repo.owner, repo.repo);
@@ -454,7 +450,6 @@ function App() {
 
           console.error(`Error updating ${repoName}:`, err);
         } finally {
-          activeRepos.delete(repoName);
           completed++;
           updateProgressDisplay();
         }
