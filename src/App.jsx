@@ -103,26 +103,30 @@ function App() {
   };
 
   // Fetch data with full pagination resume support for all metrics
-  const fetchData = async (owner, repo, token, resumeState = null) => {
+  // silent: true skips UI updates (for batch operations)
+  const fetchData = async (owner, repo, token, resumeState = null, silent = false) => {
     const isResuming = !!resumeState;
 
     try {
-      if (isResuming) {
-        setProgress({ status: 'Resuming data fetch...' });
-        console.log('Resuming fetch with state:', resumeState);
-      } else {
-        setProgress({ status: 'Fetching all historical data...' });
-        console.log('Full fetch');
+      if (!silent) {
+        if (isResuming) {
+          setProgress({ status: 'Resuming data fetch...' });
+        } else {
+          setProgress({ status: 'Fetching all historical data...' });
+        }
       }
+      console.log(isResuming ? 'Resuming fetch with state:' : 'Full fetch', resumeState);
 
       // Mark fetch as in progress so we can resume if interrupted
       await updateFetchProgress(owner, repo, { inProgress: true });
 
       const octokit = createGitHubClient(token);
       const info = await fetchRepoInfo(octokit, owner, repo);
-      setRepoInfo(info);
+      if (!silent) {
+        setRepoInfo(info);
+      }
 
-      const updateProgress = (update) => {
+      const updateProgress = silent ? () => {} : (update) => {
         setProgress(prev => ({
           ...prev,
           [update.type]: {
@@ -196,9 +200,10 @@ function App() {
       console.log(`Issues fetch: ${issuesResult.issues.length} issues, hitLimit: ${issuesResult.hitPaginationLimit}, lastDate: ${issuesResult.lastDate}`);
       console.log(`PRs fetch: ${prsResult.prs.length} PRs, hitLimit: ${prsResult.hitPaginationLimit}, lastPage: ${prsResult.lastPage}`);
       console.log(`Commits fetch: ${commitsResult.commits.length} commits, hitLimit: ${commitsResult.hitPaginationLimit}, lastDate: ${commitsResult.lastDate}`);
-      setProgress(prev => ({ ...prev, commits: { ...prev.commits, done: true, partial: commitsResult.hitPaginationLimit } }));
-
-      setProgress({ status: 'Processing data...' });
+      if (!silent) {
+        setProgress(prev => ({ ...prev, commits: { ...prev.commits, done: true, partial: commitsResult.hitPaginationLimit } }));
+        setProgress({ status: 'Processing data...' });
+      }
       const newAggregated = aggregateToDaily(
         info,
         starsResult.stargazers,
@@ -212,7 +217,7 @@ function App() {
       const cached = await getRepoFromCache(owner, repo);
 
       if (isResuming && cached && cached.metrics.length > 0) {
-        setProgress({ status: 'Merging with cached data...' });
+        if (!silent) setProgress({ status: 'Merging with cached data...' });
         const existingData = transformCachedMetrics(cached.metrics);
         finalData = mergeDailyMetrics(existingData, newAggregated);
         console.log(`Merged ${existingData.length} cached days with ${newAggregated.length} new days = ${finalData.length} total days`);
@@ -220,9 +225,10 @@ function App() {
         finalData = newAggregated;
       }
 
-      setDailyData(finalData);
-
-      setProgress({ status: 'Saving to cache...' });
+      if (!silent) {
+        setDailyData(finalData);
+        setProgress({ status: 'Saving to cache...' });
+      }
 
       // Track fetch state for all metrics
       const fetchState = {
@@ -407,7 +413,7 @@ function App() {
             commits: { lastDate: cached?.lastDate }
           };
 
-          await fetchData(repo.owner, repo.repo, token, resumeState);
+          await fetchData(repo.owner, repo.repo, token, resumeState, true); // silent mode
         } catch (err) {
           // Check if rate limited - wait and retry
           const isRateLimit = err.status === 403 || err.status === 429 ||
