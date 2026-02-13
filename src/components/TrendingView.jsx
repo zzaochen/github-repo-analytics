@@ -22,7 +22,7 @@ export default function TrendingView({ token }) {
   const [fetchProgress, setFetchProgress] = useState({}); // { 'owner/repo': { status, message } }
   const [autoFetchEnabled, setAutoFetchEnabled] = useState(false);
   const [discoveryDates, setDiscoveryDates] = useState({}); // { 'owner/repo': Date }
-  const [skippedRepos, setSkippedRepos] = useState({}); // { 'owner/repo': 'error reason' }
+  const [skippedRepos, setSkippedRepos] = useState(new Set()); // Track skipped repos
 
   const checkTrending = async () => {
     setLoading(true);
@@ -335,10 +335,7 @@ export default function TrendingView({ token }) {
                             <span className="text-red-600">✗ {progress.message}</span>
                             <button
                               onClick={() => {
-                                setSkippedRepos(prev => ({
-                                  ...prev,
-                                  [repo.fullName]: progress.message
-                                }));
+                                setSkippedRepos(prev => new Set([...prev, repo.fullName]));
                                 setNewRepos(prev => prev.filter(r => r.fullName !== repo.fullName));
                                 setFetchProgress(prev => {
                                   const updated = { ...prev };
@@ -393,8 +390,7 @@ export default function TrendingView({ token }) {
               </thead>
               <tbody>
                 {trendingRepos.map((repo, index) => {
-                  const skipReason = skippedRepos[repo.fullName];
-                  const isSkipped = !!skipReason;
+                  const isSkipped = skippedRepos.has(repo.fullName);
                   const isNew = newRepos.find(r => r.fullName === repo.fullName);
                   const isCached = !isNew && !isSkipped;
                   return (
@@ -417,11 +413,8 @@ export default function TrendingView({ token }) {
                       </td>
                       <td className="py-2 text-right">
                         {isSkipped ? (
-                          <span
-                            className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs cursor-help"
-                            title={skipReason}
-                          >
-                            Skipped: {skipReason}
+                          <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">
+                            Skipped
                           </span>
                         ) : isCached ? (
                           <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
