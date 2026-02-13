@@ -400,12 +400,18 @@ function App() {
       const CONCURRENT_REFRESHES = 10;
       const repoQueue = [...repos];
       let completed = 0;
+      const activeRepos = new Set();
 
-      const updateProgress = () => {
-        setRefreshProgress(`Updating repos... (${completed}/${repos.length})`);
+      const updateProgressDisplay = () => {
+        const active = Array.from(activeRepos).join(', ');
+        setRefreshProgress(`Updating: ${active || 'starting...'} (${completed}/${repos.length} done)`);
       };
 
       const refreshRepo = async (repo) => {
+        const repoName = `${repo.owner}/${repo.repo}`;
+        activeRepos.add(repoName);
+        updateProgressDisplay();
+
         try {
           const cached = await getRepoFromCache(repo.owner, repo.repo);
           const resumeState = {
@@ -426,15 +432,16 @@ function App() {
               waitMs = Math.max(0, (parseInt(resetTime) * 1000) - Date.now()) + 5000;
             }
             const waitMins = Math.ceil(waitMs / 60000);
-            setRefreshProgress(`Rate limited - waiting ${waitMins}m... (${completed}/${repos.length})`);
+            setRefreshProgress(`Rate limited on ${repoName} - waiting ${waitMins}m... (${completed}/${repos.length} done)`);
             await new Promise(resolve => setTimeout(resolve, waitMs));
             return refreshRepo(repo); // Retry
           }
 
-          console.error(`Error updating ${repo.owner}/${repo.repo}:`, err);
+          console.error(`Error updating ${repoName}:`, err);
         } finally {
+          activeRepos.delete(repoName);
           completed++;
-          updateProgress();
+          updateProgressDisplay();
         }
       };
 
@@ -448,7 +455,7 @@ function App() {
       };
 
       // Start concurrent workers
-      updateProgress();
+      updateProgressDisplay();
       const workers = [];
       for (let i = 0; i < Math.min(CONCURRENT_REFRESHES, repos.length); i++) {
         workers.push(worker());
