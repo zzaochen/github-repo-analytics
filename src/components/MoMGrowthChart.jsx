@@ -131,7 +131,9 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
 
   const formatMonth = (dateStr) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `${month}-${year}`;
   };
 
   const formatMonthIndex = (index) => {
