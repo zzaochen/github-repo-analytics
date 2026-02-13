@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import CachedRepos from './components/CachedRepos';
 import TokenSettings from './components/TokenSettings';
 import CompareView from './components/CompareView';
+import TrendingView from './components/TrendingView';
 import BatchFetch from './components/BatchFetch';
 import RateLimitStatus from './components/RateLimitStatus';
 import {
@@ -564,6 +565,16 @@ function App() {
               >
                 Repo Compare
               </button>
+              <button
+                onClick={() => setActiveView('trending')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeView === 'trending'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Trending
+              </button>
             </div>
           </div>
 
@@ -612,6 +623,11 @@ function App() {
           {/* Compare View */}
           {activeView === 'compare' && (
             <CompareView />
+          )}
+
+          {/* Trending View */}
+          {activeView === 'trending' && (
+            <TrendingView token={token} />
           )}
         </div>
       </div>
