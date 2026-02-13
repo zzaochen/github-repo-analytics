@@ -390,11 +390,16 @@ function App() {
     try {
       const repos = await getCachedRepos();
 
-      // Step 1: Update all repos to today
-      for (let i = 0; i < repos.length; i++) {
-        const repo = repos[i];
-        setRefreshProgress(`Updating ${repo.owner}/${repo.repo} (${i + 1}/${repos.length})`);
+      // Step 1: Update all repos to today (parallel with rate limit handling)
+      const CONCURRENT_REFRESHES = 10;
+      const repoQueue = [...repos];
+      let completed = 0;
 
+      const updateProgress = () => {
+        setRefreshProgress(`Updating repos... (${completed}/${repos.length})`);
+      };
+
+      const refreshRepo = async (repo) => {
         try {
           const cached = await getRepoFromCache(repo.owner, repo.repo);
           const resumeState = {
@@ -404,9 +409,45 @@ function App() {
 
           await fetchData(repo.owner, repo.repo, token, resumeState);
         } catch (err) {
+          // Check if rate limited - wait and retry
+          const isRateLimit = err.status === 403 || err.status === 429 ||
+            err.message?.toLowerCase().includes('rate limit');
+
+          if (isRateLimit) {
+            const resetTime = err.response?.headers?.['x-ratelimit-reset'];
+            let waitMs = 60000;
+            if (resetTime) {
+              waitMs = Math.max(0, (parseInt(resetTime) * 1000) - Date.now()) + 5000;
+            }
+            const waitMins = Math.ceil(waitMs / 60000);
+            setRefreshProgress(`Rate limited - waiting ${waitMins}m... (${completed}/${repos.length})`);
+            await new Promise(resolve => setTimeout(resolve, waitMs));
+            return refreshRepo(repo); // Retry
+          }
+
           console.error(`Error updating ${repo.owner}/${repo.repo}:`, err);
+        } finally {
+          completed++;
+          updateProgress();
         }
+      };
+
+      const worker = async () => {
+        while (repoQueue.length > 0) {
+          const repo = repoQueue.shift();
+          if (repo) {
+            await refreshRepo(repo);
+          }
+        }
+      };
+
+      // Start concurrent workers
+      updateProgress();
+      const workers = [];
+      for (let i = 0; i < Math.min(CONCURRENT_REFRESHES, repos.length); i++) {
+        workers.push(worker());
       }
+      await Promise.all(workers);
 
       // Step 2: Calculate MoM metrics
       setRefreshProgress('Calculating MoM metrics...');
