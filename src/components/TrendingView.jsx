@@ -13,6 +13,25 @@ import {
 import { saveRepoToCache } from '../services/supabase';
 import { aggregateToDaily } from '../utils/dataAggregator';
 
+// Load skipped repos from localStorage
+const loadSkippedRepos = () => {
+  try {
+    const stored = localStorage.getItem('skippedTrendingRepos');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+// Save skipped repos to localStorage
+const saveSkippedRepos = (skipped) => {
+  try {
+    localStorage.setItem('skippedTrendingRepos', JSON.stringify([...skipped]));
+  } catch (e) {
+    console.error('Failed to save skipped repos:', e);
+  }
+};
+
 export default function TrendingView({ token }) {
   const [trendingRepos, setTrendingRepos] = useState([]);
   const [newRepos, setNewRepos] = useState([]);
@@ -22,7 +41,7 @@ export default function TrendingView({ token }) {
   const [fetchProgress, setFetchProgress] = useState({}); // { 'owner/repo': { status, message } }
   const [autoFetchEnabled, setAutoFetchEnabled] = useState(false);
   const [discoveryDates, setDiscoveryDates] = useState({}); // { 'owner/repo': Date }
-  const [skippedRepos, setSkippedRepos] = useState(new Set()); // Track skipped repos
+  const [skippedRepos, setSkippedRepos] = useState(() => loadSkippedRepos()); // Persisted skipped repos
 
   const checkTrending = async () => {
     setLoading(true);
@@ -36,8 +55,9 @@ export default function TrendingView({ token }) {
       // Get cached repos from Supabase
       const cached = await getCachedRepos();
 
-      // Filter to find net new repos
-      const netNew = filterNewRepos(trending, cached);
+      // Filter to find net new repos (excluding skipped repos)
+      const netNew = filterNewRepos(trending, cached)
+        .filter(repo => !skippedRepos.has(repo.fullName));
       setNewRepos(netNew);
 
       const checkDate = new Date();
@@ -335,7 +355,9 @@ export default function TrendingView({ token }) {
                             <span className="text-red-600">✗ {progress.message}</span>
                             <button
                               onClick={() => {
-                                setSkippedRepos(prev => new Set([...prev, repo.fullName]));
+                                const newSkipped = new Set([...skippedRepos, repo.fullName]);
+                                setSkippedRepos(newSkipped);
+                                saveSkippedRepos(newSkipped);
                                 setNewRepos(prev => prev.filter(r => r.fullName !== repo.fullName));
                                 setFetchProgress(prev => {
                                   const updated = { ...prev };
