@@ -137,9 +137,20 @@ export default function TrendingView({ token }) {
 
     } catch (err) {
       console.error(`Error fetching ${repoPath}:`, err);
+
+      // Categorize errors for better user feedback
+      let errorMessage = err.message || 'Failed';
+      if (err.status === 404 || err.message?.includes('Not Found')) {
+        errorMessage = 'Repo not found (deleted/renamed/private)';
+      } else if (err.status === 403 || err.status === 401) {
+        errorMessage = 'Access denied (check token permissions)';
+      } else if (err.status === 429) {
+        errorMessage = 'Rate limited - try again later';
+      }
+
       setFetchProgress(prev => ({
         ...prev,
-        [repoPath]: { status: 'error', message: err.message || 'Failed' }
+        [repoPath]: { status: 'error', message: errorMessage }
       }));
     }
   };
@@ -319,7 +330,22 @@ export default function TrendingView({ token }) {
                           <span className="text-green-600">✓ {progress.message}</span>
                         )}
                         {progress.status === 'error' && (
-                          <span className="text-red-600">✗ {progress.message}</span>
+                          <>
+                            <span className="text-red-600">✗ {progress.message}</span>
+                            <button
+                              onClick={() => {
+                                setNewRepos(prev => prev.filter(r => r.fullName !== repo.fullName));
+                                setFetchProgress(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[repo.fullName];
+                                  return updated;
+                                });
+                              }}
+                              className="px-2 py-0.5 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded text-xs transition-colors"
+                            >
+                              Skip
+                            </button>
+                          </>
                         )}
                       </div>
                     ) : (
