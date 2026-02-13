@@ -186,10 +186,26 @@ export default function TrendingView({ token }) {
     });
     setFetchProgress(initialProgress);
 
-    // Fetch sequentially to avoid rate limits
-    for (const repo of newRepos) {
-      await fetchSingleRepo(repo.fullName);
+    // Fetch in parallel batches (3 concurrent to balance speed vs rate limits)
+    const CONCURRENT_FETCHES = 3;
+    const reposCopy = [...newRepos];
+
+    const fetchNext = async () => {
+      while (reposCopy.length > 0) {
+        const repo = reposCopy.shift();
+        if (repo) {
+          await fetchSingleRepo(repo.fullName);
+        }
+      }
+    };
+
+    // Start concurrent workers
+    const workers = [];
+    for (let i = 0; i < Math.min(CONCURRENT_FETCHES, newRepos.length); i++) {
+      workers.push(fetchNext());
     }
+
+    await Promise.all(workers);
   };
 
   const formatNumber = (num) => {
