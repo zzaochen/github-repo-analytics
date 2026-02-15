@@ -30,15 +30,11 @@ function parseTrendingHtml(html) {
   while ((match = repoRegex.exec(html)) !== null) {
     const articleHtml = match[1];
 
-    // Extract repo path from h2 tag to avoid sponsor links
-    const h2Match = articleHtml.match(/<h2[^>]*>[\s\S]*?href="\/([^/]+\/[^/"]+)"[\s\S]*?<\/h2>/);
+    // Extract repo path from h2 with class "h3" (the repo name heading)
+    const h2Match = articleHtml.match(/<h2[^>]*class="[^"]*h3[^"]*"[^>]*>[\s\S]*?href="\/([^/]+\/[^/"]+)"[\s\S]*?<\/h2>/);
     if (!h2Match) continue;
 
     const repoPath = h2Match[1];
-    // Skip sponsors, users, orgs links
-    if (repoPath.startsWith('sponsors/') || repoPath.startsWith('users/') || repoPath.startsWith('orgs/')) {
-      continue;
-    }
     const [owner, repo] = repoPath.split('/');
 
     // Extract description
