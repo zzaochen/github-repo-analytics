@@ -31,10 +31,15 @@ function parseTrendingHtml(html) {
   while ((match = repoRegex.exec(html)) !== null) {
     const articleHtml = match[1];
 
-    const repoPathMatch = articleHtml.match(/href="\/([^/]+\/[^/"]+)"/);
-    if (!repoPathMatch) continue;
+    // Extract repo path from h2 tag to avoid sponsor links
+    const h2Match = articleHtml.match(/<h2[^>]*>[\s\S]*?href="\/([^/]+\/[^/"]+)"[\s\S]*?<\/h2>/);
+    if (!h2Match) continue;
 
-    const repoPath = repoPathMatch[1];
+    const repoPath = h2Match[1];
+    // Skip sponsors, users, orgs links
+    if (repoPath.startsWith('sponsors/') || repoPath.startsWith('users/') || repoPath.startsWith('orgs/')) {
+      continue;
+    }
     const [owner, repo] = repoPath.split('/');
 
     const descMatch = articleHtml.match(/<p class="[^"]*col-9[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/p>/);

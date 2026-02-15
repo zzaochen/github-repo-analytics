@@ -46,10 +46,15 @@ function parseTrendingHtml(html) {
     const articleHtml = match[1];
 
     // Extract repo path (owner/repo) from the h2 > a link
-    const repoPathMatch = articleHtml.match(/href="\/([^/]+\/[^/"]+)"/);
-    if (!repoPathMatch) continue;
+    // Look for the repo link inside <h2> tag, or exclude sponsors/users/orgs paths
+    const h2Match = articleHtml.match(/<h2[^>]*>[\s\S]*?href="\/([^/]+\/[^/"]+)"[\s\S]*?<\/h2>/);
+    if (!h2Match) continue;
 
-    const repoPath = repoPathMatch[1];
+    const repoPath = h2Match[1];
+    // Skip if it's a sponsors, users, or orgs link
+    if (repoPath.startsWith('sponsors/') || repoPath.startsWith('users/') || repoPath.startsWith('orgs/')) {
+      continue;
+    }
     const [owner, repo] = repoPath.split('/');
 
     // Extract description
