@@ -548,9 +548,11 @@ function App() {
               token={token}
               onComplete={() => setCacheKey(k => k + 1)}
             />
+          </div>
 
+          <div>
             {/* Refresh All Repositories */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
               <h3 className="text-sm font-medium text-gray-700 mb-3">All Cached Repositories</h3>
               <button
                 onClick={handleRefreshAll}
@@ -574,9 +576,7 @@ function App() {
                 <p className="text-xs text-blue-600 mt-2">{refreshProgress}</p>
               )}
             </div>
-          </div>
 
-          <div>
             <TokenSettings
               token={token}
               setToken={setToken}
