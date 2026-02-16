@@ -202,12 +202,14 @@ function App() {
       const issuesSinceDate = resumeState?.issues?.lastDate || null;
       const prsStartPage = resumeState?.prs?.lastPage ? resumeState.prs.lastPage + 1 : 1;
       const commitsSinceDate = resumeState?.commits?.lastDate || null;
+      // For stars: use sinceDate for incremental fetch when no cursor is available
+      const starsSinceDate = resumeState?.sinceDate || null;
 
       setProgress(prev => ({ ...prev, status: 'Fetching all data...' }));
 
       // Fetch all data types in parallel for speed, with incremental saving
       const [starsResult, forksResult, issuesResult, prsResult, commitsResult] = await Promise.all([
-        fetchAllStargazersGraphQL(token, owner, repo, updateProgress, starsCursor, onSave),
+        fetchAllStargazersGraphQL(token, owner, repo, updateProgress, starsCursor, onSave, starsSinceDate),
         fetchAllForks(octokit, owner, repo, updateProgress, forksStartPage, onSave),
         fetchAllIssues(octokit, owner, repo, updateProgress, issuesSinceDate, onSave),
         fetchAllPullRequests(octokit, owner, repo, updateProgress, prsStartPage, onSave),
@@ -364,17 +366,22 @@ function App() {
     try {
       const cached = await getRepoFromCache(owner, repo);
       // Use 1-day overlap for issues/commits to ensure we don't miss data
-      // Stars/forks/prs use cursor/page-based resumption which is precise
       const overlapDate = getOverlapDate(cached?.lastDate);
+
+      // For stars: if we have a cursor, use it; otherwise use sinceDate for incremental fetch
+      const hasCursor = cached?.fetchState?.stars?.cursor;
       const resumeState = cached?.fetchState ? {
         stars: cached.fetchState.stars,
         forks: cached.fetchState.forks,
         prs: cached.fetchState.prs,
         issues: { lastDate: overlapDate },
-        commits: { lastDate: overlapDate }
+        commits: { lastDate: overlapDate },
+        // If no cursor, use sinceDate for date-based incremental star fetch
+        sinceDate: hasCursor ? null : (overlapDate ? `${overlapDate}T00:00:00Z` : null)
       } : {
         issues: { lastDate: overlapDate },
-        commits: { lastDate: overlapDate }
+        commits: { lastDate: overlapDate },
+        sinceDate: overlapDate ? `${overlapDate}T00:00:00Z` : null
       };
 
       // Get existing counts from last cached metric for progress display
@@ -464,15 +471,19 @@ function App() {
           // Use full fetch state from cache for incremental updates
           // Use 1-day overlap for issues/commits to ensure we don't miss data
           const overlapDate = getOverlapDate(cached?.lastDate);
+          const hasCursor = cached?.fetchState?.stars?.cursor;
           const resumeState = cached?.fetchState ? {
             stars: cached.fetchState.stars,
             forks: cached.fetchState.forks,
             prs: cached.fetchState.prs,
             issues: { lastDate: overlapDate },
-            commits: { lastDate: overlapDate }
+            commits: { lastDate: overlapDate },
+            // If no cursor, use sinceDate for date-based incremental star fetch
+            sinceDate: hasCursor ? null : (overlapDate ? `${overlapDate}T00:00:00Z` : null)
           } : {
             issues: { lastDate: overlapDate },
-            commits: { lastDate: overlapDate }
+            commits: { lastDate: overlapDate },
+            sinceDate: overlapDate ? `${overlapDate}T00:00:00Z` : null
           };
 
           await fetchData(repo.owner, repo.repo, token, resumeState, true); // silent mode

@@ -102,7 +102,7 @@ async function handleRateLimit(error, onProgress, type, fetched) {
 
 // Fetch stargazers using GraphQL (cursor-based pagination, no 1000-page limit)
 // onSave callback is called periodically to save progress
-export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, startCursor = null, onSave = null) {
+export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, startCursor = null, onSave = null, sinceDate = null) {
   const graphqlWithAuth = createGraphQLClient(token);
   const stargazers = [];
   let cursor = startCursor;
@@ -114,12 +114,20 @@ export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, 
   const SAVE_INTERVAL = 500; // Save every 500 items
   let lastSaveCount = 0;
 
-  console.log(`Fetching stargazers via GraphQL${startCursor ? ` (resuming from cursor)` : ' (full fetch)'}...`);
+  // If we have a sinceDate but no cursor, use DESC order (newest first) and stop at old stars
+  // This is more efficient for incremental updates on repos without a saved cursor
+  const useDescOrder = sinceDate && !startCursor;
+  const direction = useDescOrder ? 'DESC' : 'ASC';
+
+  const fetchMode = startCursor ? '(resuming from cursor)' :
+                    sinceDate ? `(incremental since ${sinceDate})` :
+                    '(full fetch)';
+  console.log(`Fetching stargazers via GraphQL ${fetchMode}, order: ${direction}...`);
 
   const query = `
     query($owner: String!, $repo: String!, $first: Int!, $after: String) {
       repository(owner: $owner, name: $repo) {
-        stargazers(first: $first, after: $after, orderBy: {field: STARRED_AT, direction: ASC}) {
+        stargazers(first: $first, after: $after, orderBy: {field: STARRED_AT, direction: ${direction}}) {
           edges {
             starredAt
             node {
@@ -151,11 +159,24 @@ export async function fetchAllStargazersGraphQL(token, owner, repo, onProgress, 
       const { edges, pageInfo } = result.repository.stargazers;
       const rateLimit = result.rateLimit;
 
+      let hitOldStar = false;
       for (const edge of edges) {
+        // If using DESC order with sinceDate, stop when hitting old stars
+        if (useDescOrder && edge.starredAt <= sinceDate) {
+          hitOldStar = true;
+          break;
+        }
         stargazers.push({
           user: edge.node.login,
           starredAt: edge.starredAt
         });
+      }
+
+      // Stop if we hit old stars (DESC mode)
+      if (hitOldStar) {
+        hasNextPage = false;
+        console.log(`Stopping at old star (${stargazers.length} new stars found)`);
+        break;
       }
 
       lastCursor = pageInfo.endCursor;
