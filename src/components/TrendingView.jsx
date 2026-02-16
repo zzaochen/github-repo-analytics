@@ -32,7 +32,14 @@ const saveSkippedRepos = (skipped) => {
   }
 };
 
+const PERIODS = {
+  daily: { label: 'Daily', param: 'daily', starsLabel: 'today' },
+  weekly: { label: 'Weekly', param: 'weekly', starsLabel: 'this week' },
+  monthly: { label: 'Monthly', param: 'monthly', starsLabel: 'this month' }
+};
+
 export default function TrendingView({ token }) {
+  const [trendingPeriod, setTrendingPeriod] = useState('weekly');
   const [trendingRepos, setTrendingRepos] = useState([]);
   const [newRepos, setNewRepos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -43,6 +50,8 @@ export default function TrendingView({ token }) {
   const [discoveryDates, setDiscoveryDates] = useState({}); // { 'owner/repo': Date }
   const [skippedRepos, setSkippedRepos] = useState(() => loadSkippedRepos()); // Persisted skipped repos
   const [lastCronRun, setLastCronRun] = useState(null);
+
+  const periodConfig = PERIODS[trendingPeriod];
 
   // Fetch last cron run on mount
   useEffect(() => {
@@ -55,7 +64,7 @@ export default function TrendingView({ token }) {
 
     try {
       // Fetch trending repos from GitHub
-      const trending = await fetchTrendingRepos('weekly');
+      const trending = await fetchTrendingRepos(trendingPeriod);
       setTrendingRepos(trending);
 
       // Get cached repos from Supabase
@@ -247,11 +256,33 @@ export default function TrendingView({ token }) {
     <div>
       {/* Header */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+        {/* Period Tabs */}
+        <div className="flex gap-2 mb-4">
+          {Object.entries(PERIODS).map(([key, { label }]) => (
+            <button
+              key={key}
+              onClick={() => {
+                setTrendingPeriod(key);
+                setTrendingRepos([]);
+                setNewRepos([]);
+                setLastChecked(null);
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                trendingPeriod === key
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">GitHub Weekly Trending</h2>
+            <h2 className="text-lg font-semibold text-gray-900">GitHub {periodConfig.label} Trending</h2>
             <p className="text-sm text-gray-500">
-              Discover this week's trending repositories and auto-fetch their data
+              Discover {trendingPeriod === 'daily' ? "today's" : trendingPeriod === 'weekly' ? "this week's" : "this month's"} trending repositories and auto-fetch their data
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -260,7 +291,7 @@ export default function TrendingView({ token }) {
               disabled={loading}
               className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Checking...' : 'Check Weekly Trending'}
+              {loading ? 'Checking...' : `Check ${periodConfig.label} Trending`}
             </button>
           </div>
         </div>
@@ -348,7 +379,7 @@ export default function TrendingView({ token }) {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <div className="text-2xl font-bold text-gray-900">{trendingRepos.length}</div>
-            <div className="text-sm text-gray-500">Weekly Trending</div>
+            <div className="text-sm text-gray-500">{periodConfig.label} Trending</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <div className="text-2xl font-bold text-green-600">{newRepos.length}</div>
@@ -412,7 +443,7 @@ export default function TrendingView({ token }) {
                     )}
                     <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
                       <span>★ {formatNumber(repo.stars)}</span>
-                      <span>+{formatNumber(repo.starsGained)} stars this week</span>
+                      <span>+{formatNumber(repo.starsGained)} stars {periodConfig.starsLabel}</span>
                       <span>🍴 {formatNumber(repo.forks)}</span>
                     </div>
                   </div>
@@ -479,7 +510,7 @@ export default function TrendingView({ token }) {
       {trendingRepos.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <h3 className="text-md font-semibold text-gray-900 mb-4">
-            All Weekly Trending Repos ({trendingRepos.length})
+            All {periodConfig.label} Trending Repos ({trendingRepos.length})
           </h3>
 
           <div className="overflow-x-auto">
@@ -490,7 +521,7 @@ export default function TrendingView({ token }) {
                   <th className="pb-2 font-medium">Repository</th>
                   <th className="pb-2 font-medium">Language</th>
                   <th className="pb-2 font-medium text-right">Stars</th>
-                  <th className="pb-2 font-medium text-right">Stars This Week</th>
+                  <th className="pb-2 font-medium text-right">Stars {trendingPeriod === 'daily' ? 'Today' : trendingPeriod === 'weekly' ? 'This Week' : 'This Month'}</th>
                   <th className="pb-2 font-medium text-right">Status</th>
                   <th className="pb-2 font-medium text-right">Discovered</th>
                 </tr>
@@ -557,7 +588,7 @@ export default function TrendingView({ token }) {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
-          <p className="text-lg">Click "Check Weekly Trending" to discover this week's trending repositories</p>
+          <p className="text-lg">Click "Check {periodConfig.label} Trending" to discover trending repositories</p>
           <p className="text-sm mt-1">We'll find repos you haven't cached yet</p>
         </div>
       )}
