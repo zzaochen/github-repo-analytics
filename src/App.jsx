@@ -369,34 +369,30 @@ function App() {
 
     try {
       const cached = await getRepoFromCache(owner, repo);
-      // Use 1-day overlap for issues/commits to ensure we don't miss data
+      // Use 1-day overlap to ensure we don't miss data
       const overlapDate = getOverlapDate(cached?.lastDate);
+      const sinceDate = overlapDate ? `${overlapDate}T00:00:00Z` : null;
 
       // Debug logging
       console.log('=== Update to Today Debug ===');
       console.log('cached.lastDate:', cached?.lastDate);
       console.log('overlapDate:', overlapDate);
-      console.log('cached.fetchState:', JSON.stringify(cached?.fetchState, null, 2));
+      console.log('sinceDate:', sinceDate);
 
-      // For stars: if we have a cursor, use it; otherwise use sinceDate for incremental fetch
-      const hasCursor = cached?.fetchState?.stars?.cursor;
-      console.log('hasCursor:', hasCursor);
-
-      const resumeState = cached?.fetchState ? {
-        stars: cached.fetchState.stars,
-        forks: cached.fetchState.forks,
-        prs: cached.fetchState.prs,
+      // For "Update to Today", ALWAYS use date-based approach (not cursor)
+      // Cursor is only for "Continue Fetching" interrupted fetches
+      // Date-based: fetch newest first, stop when hitting data older than sinceDate
+      const resumeState = {
+        // Don't pass cursor/lastPage - use sinceDate for all metrics
+        stars: { cursor: null },
+        forks: { lastPage: null },
+        prs: { lastPage: null },
         issues: { lastDate: overlapDate },
         commits: { lastDate: overlapDate },
-        // If no cursor, use sinceDate for date-based incremental star fetch
-        sinceDate: hasCursor ? null : (overlapDate ? `${overlapDate}T00:00:00Z` : null)
-      } : {
-        issues: { lastDate: overlapDate },
-        commits: { lastDate: overlapDate },
-        sinceDate: overlapDate ? `${overlapDate}T00:00:00Z` : null
+        sinceDate: sinceDate
       };
 
-      console.log('resumeState.sinceDate:', resumeState.sinceDate);
+      console.log('Using date-based incremental fetch with sinceDate:', sinceDate);
       console.log('=== End Debug ===');
 
       // Get existing counts from last cached metric for progress display
@@ -483,22 +479,17 @@ function App() {
             return; // Skip API calls, finally block will still run
           }
 
-          // Use full fetch state from cache for incremental updates
-          // Use 1-day overlap for issues/commits to ensure we don't miss data
+          // Use date-based incremental fetch (not cursor-based)
+          // This ensures we only fetch new data since lastDate
           const overlapDate = getOverlapDate(cached?.lastDate);
-          const hasCursor = cached?.fetchState?.stars?.cursor;
-          const resumeState = cached?.fetchState ? {
-            stars: cached.fetchState.stars,
-            forks: cached.fetchState.forks,
-            prs: cached.fetchState.prs,
+          const sinceDate = overlapDate ? `${overlapDate}T00:00:00Z` : null;
+          const resumeState = {
+            stars: { cursor: null },
+            forks: { lastPage: null },
+            prs: { lastPage: null },
             issues: { lastDate: overlapDate },
             commits: { lastDate: overlapDate },
-            // If no cursor, use sinceDate for date-based incremental star fetch
-            sinceDate: hasCursor ? null : (overlapDate ? `${overlapDate}T00:00:00Z` : null)
-          } : {
-            issues: { lastDate: overlapDate },
-            commits: { lastDate: overlapDate },
-            sinceDate: overlapDate ? `${overlapDate}T00:00:00Z` : null
+            sinceDate: sinceDate
           };
 
           await fetchData(repo.owner, repo.repo, token, resumeState, true); // silent mode
