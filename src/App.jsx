@@ -6,6 +6,7 @@ import CachedRepos from './components/CachedRepos';
 import TokenSettings from './components/TokenSettings';
 import CompareView from './components/CompareView';
 import TrendingView from './components/TrendingView';
+import HomePage from './components/HomePage';
 import BatchFetch from './components/BatchFetch';
 import RateLimitStatus from './components/RateLimitStatus';
 import {
@@ -608,12 +609,24 @@ function App() {
         {/* Top Navigation Bar */}
         <div className="bg-white border-b border-gray-200 px-4 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">GitHub Repository Analytics</h1>
+            <Link to="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+              GitHub Repository Analytics
+            </Link>
             <nav className="flex items-center gap-6">
               <Link
                 to="/"
                 className={`text-sm font-medium transition-colors ${
                   location.pathname === '/'
+                    ? 'text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Home
+              </Link>
+              <Link
+                to="/lookup"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/lookup'
                     ? 'text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -646,8 +659,11 @@ function App() {
 
         <div className="max-w-7xl mx-auto px-4 py-8">
           <Routes>
+            {/* Home - Trending Overview */}
+            <Route path="/" element={<HomePage />} />
+
             {/* Repo Lookup View */}
-            <Route path="/" element={
+            <Route path="/lookup" element={
               <>
                 <CachedRepos
                   key={cacheKey}
