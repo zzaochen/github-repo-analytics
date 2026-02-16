@@ -13,11 +13,7 @@ export default function HomePage() {
     weekly: { repos: [], loading: true, error: null },
     monthly: { repos: [], loading: true, error: null }
   });
-  const [sortBy, setSortBy] = useState({
-    daily: 'starsGained',
-    weekly: 'starsGained',
-    monthly: 'starsGained'
-  });
+  const [sortBy, setSortBy] = useState('starsGained');
 
   useEffect(() => {
     // Fetch all three periods in parallel
@@ -38,9 +34,9 @@ export default function HomePage() {
     });
   }, []);
 
-  const getSortedRepos = (repos, sortKey) => {
+  const getSortedRepos = (repos) => {
     return [...repos].sort((a, b) => {
-      if (sortKey === 'starsGained') return b.starsGained - a.starsGained;
+      if (sortBy === 'starsGained') return b.starsGained - a.starsGained;
       return b.stars - a.stars;
     });
   };
@@ -52,9 +48,34 @@ export default function HomePage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">GitHub Trending</h2>
-        <p className="text-gray-500">Discover the most popular repositories right now</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">GitHub Trending</h2>
+          <p className="text-gray-500 text-sm">Discover the most popular repositories right now</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-500">Sort by:</span>
+          <button
+            onClick={() => setSortBy('starsGained')}
+            className={`px-3 py-1 rounded-l-lg border transition-colors ${
+              sortBy === 'starsGained'
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Stars Added
+          </button>
+          <button
+            onClick={() => setSortBy('stars')}
+            className={`px-3 py-1 rounded-r-lg border-t border-r border-b -ml-px transition-colors ${
+              sortBy === 'stars'
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Total Stars
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -95,26 +116,12 @@ export default function HomePage() {
                       <tr className="text-left text-gray-500 text-xs">
                         <th className="pb-2 font-medium">#</th>
                         <th className="pb-2 font-medium">Repository</th>
-                        <th className="pb-2 font-medium text-right">
-                          <button
-                            onClick={() => setSortBy(prev => ({ ...prev, [key]: 'stars' }))}
-                            className={`hover:text-gray-900 ${sortBy[key] === 'stars' ? 'text-blue-600' : ''}`}
-                          >
-                            Stars {sortBy[key] === 'stars' && '▼'}
-                          </button>
-                        </th>
-                        <th className="pb-2 font-medium text-right">
-                          <button
-                            onClick={() => setSortBy(prev => ({ ...prev, [key]: 'starsGained' }))}
-                            className={`hover:text-gray-900 ${sortBy[key] === 'starsGained' ? 'text-blue-600' : ''}`}
-                          >
-                            New {sortBy[key] === 'starsGained' && '▼'}
-                          </button>
-                        </th>
+                        <th className="pb-2 font-medium text-right">Stars</th>
+                        <th className="pb-2 font-medium text-right">New</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {getSortedRepos(repos, sortBy[key]).slice(0, 15).map((repo, index) => (
+                      {getSortedRepos(repos).slice(0, 15).map((repo, index) => (
                         <tr key={repo.fullName} className="border-t border-gray-100">
                           <td className="py-1.5 text-gray-400">{index + 1}</td>
                           <td className="py-1.5">
