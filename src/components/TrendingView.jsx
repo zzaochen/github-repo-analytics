@@ -116,15 +116,46 @@ export default function TrendingView({ token }) {
       const octokit = createGitHubClient(token);
       const info = await fetchRepoInfo(octokit, owner, repo);
 
+      const totalStars = info.stars;
+      const totalForks = info.forks;
+
+      // Progress tracking for this repo
+      let starsProgress = 0;
+      let forksProgress = 0;
+
+      const updateRepoProgress = () => {
+        const starsPct = totalStars > 0 ? Math.round((starsProgress / totalStars) * 100) : 0;
+        const forksPct = totalForks > 0 ? Math.round((forksProgress / totalForks) * 100) : 0;
+        const overallPct = Math.round((starsPct + forksPct) / 2);
+
+        setFetchProgress(prev => ({
+          ...prev,
+          [repoPath]: {
+            status: 'fetching',
+            message: `${overallPct}% (Stars: ${starsPct}%, Forks: ${forksPct}%)`
+          }
+        }));
+      };
+
       setFetchProgress(prev => ({
         ...prev,
-        [repoPath]: { status: 'fetching', message: 'Fetching data...' }
+        [repoPath]: { status: 'fetching', message: '0%' }
       }));
 
-      // Fetch all data types in parallel
+      // Fetch all data types in parallel with progress callbacks
       const [starsResult, forksResult, issuesResult, prsResult, commitsResult] = await Promise.all([
-        fetchAllStargazersGraphQL(token, owner, repo, () => {}),
-        fetchAllForks(octokit, owner, repo, () => {}),
+        fetchAllStargazersGraphQL(token, owner, repo, (update) => {
+          if (update.fetched) {
+            starsProgress = update.fetched;
+            updateRepoProgress();
+          }
+        }),
+        fetchAllForks(octokit, owner, repo, (update) => {
+          if (update.fetched) {
+            forksProgress = update.fetched;
+            updateRepoProgress();
+          }
+        }),
         fetchAllIssues(octokit, owner, repo, () => {}),
         fetchAllPullRequests(octokit, owner, repo, () => {}),
         fetchContributorCommits(octokit, owner, repo, () => {})
