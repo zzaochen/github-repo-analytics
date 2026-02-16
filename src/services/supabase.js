@@ -803,13 +803,30 @@ export async function getLastCronRun(period = 'weekly') {
 
   try {
     const jobName = `check-trending-${period}`;
-    const { data, error } = await supabase
+
+    // First try the new job name format (check-trending-weekly, etc.)
+    let { data, error } = await supabase
       .from('cron_logs')
       .select('*')
       .eq('job_name', jobName)
       .order('run_at', { ascending: false })
       .limit(1)
       .single();
+
+    // If not found and this is weekly, also check the old job name (check-trending)
+    if (error && period === 'weekly') {
+      const fallback = await supabase
+        .from('cron_logs')
+        .select('*')
+        .eq('job_name', 'check-trending')
+        .order('run_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!fallback.error) {
+        return fallback.data;
+      }
+    }
 
     if (error) {
       console.log(`No cron logs found for ${jobName} or error:`, error.message);
