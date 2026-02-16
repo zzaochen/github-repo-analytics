@@ -106,12 +106,16 @@ function App() {
 
   // Fetch data with full pagination resume support for all metrics
   // silent: true skips UI updates (for batch operations)
-  const fetchData = async (owner, repo, token, resumeState = null, silent = false) => {
+  // existingCounts: { stars, forks } - for refresh operations, shows progress relative to new data
+  const fetchData = async (owner, repo, token, resumeState = null, silent = false, existingCounts = null) => {
     const isResuming = !!resumeState;
+    const isRefresh = isResuming && existingCounts;
 
     try {
       if (!silent) {
-        if (isResuming) {
+        if (isRefresh) {
+          setProgress({ status: 'Updating to today...' });
+        } else if (isResuming) {
           setProgress({ status: 'Resuming data fetch...' });
         } else {
           setProgress({ status: 'Fetching all historical data...' });
@@ -128,10 +132,18 @@ function App() {
         setRepoInfo(info);
       }
 
+      // For refresh operations, calculate how many NEW items to fetch
+      const newToFetch = isRefresh ? {
+        stars: Math.max(0, info.stars - (existingCounts.stars || 0)),
+        forks: Math.max(0, info.forks - (existingCounts.forks || 0))
+      } : null;
+
       const updateProgress = silent ? () => {} : (update) => {
         setProgress(prev => ({
           ...prev,
-          totals: {
+          isRefresh,
+          existingCounts,
+          totals: isRefresh ? newToFetch : {
             stars: info.stars,
             forks: info.forks,
             issues: info.openIssues
@@ -364,7 +376,14 @@ function App() {
         commits: { lastDate: overlapDate }
       };
 
-      await fetchData(owner, repo, token, resumeState);
+      // Get existing counts from last cached metric for progress display
+      const lastMetric = cached?.metrics?.[cached.metrics.length - 1];
+      const existingCounts = lastMetric ? {
+        stars: lastMetric.total_stars || lastMetric.totalStars || 0,
+        forks: lastMetric.total_forks || lastMetric.totalForks || 0
+      } : null;
+
+      await fetchData(owner, repo, token, resumeState, false, existingCounts);
     } catch (err) {
       console.error('Error updating:', err);
       setError(err.message || 'Failed to update repository data');

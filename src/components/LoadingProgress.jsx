@@ -1,5 +1,5 @@
 export default function LoadingProgress({ progress }) {
-  const { totals, stars, forks, issues, prs, commits, status } = progress;
+  const { totals, stars, forks, issues, prs, commits, status, isRefresh, existingCounts } = progress;
 
   const getPercentage = (fetched, total) => {
     if (!total || total === 0) return null;
@@ -12,9 +12,9 @@ export default function LoadingProgress({ progress }) {
   };
 
   const metrics = [
-    { key: 'stars', label: 'Stars', data: stars, total: totals?.stars },
-    { key: 'forks', label: 'Forks', data: forks, total: totals?.forks },
-    { key: 'issues', label: 'Issues', data: issues, total: totals?.issues },
+    { key: 'stars', label: isRefresh ? 'New Stars' : 'Stars', data: stars, total: totals?.stars },
+    { key: 'forks', label: isRefresh ? 'New Forks' : 'Forks', data: forks, total: totals?.forks },
+    { key: 'issues', label: 'Issues', data: issues, total: isRefresh ? null : totals?.issues },
     { key: 'prs', label: 'PRs', data: prs, total: null },
     { key: 'commits', label: 'Commits', data: commits, total: null },
   ];
@@ -55,7 +55,7 @@ export default function LoadingProgress({ progress }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
         <span className="text-gray-700 font-medium">
-          Fetching Data
+          {isRefresh ? 'Updating Data' : 'Fetching Data'}
           {overallProgress !== null && (
             <span className="text-blue-600 ml-2">({overallProgress}%)</span>
           )}
@@ -64,6 +64,13 @@ export default function LoadingProgress({ progress }) {
           <span className="text-gray-500 text-sm">— {status}</span>
         )}
       </div>
+
+      {/* Show existing counts context for refresh */}
+      {isRefresh && existingCounts && (
+        <div className="text-sm text-gray-500 mb-3">
+          Cached: {formatNumber(existingCounts.stars)} stars, {formatNumber(existingCounts.forks)} forks
+        </div>
+      )}
 
       {/* Progress bars for each metric */}
       {activeMetrics.length > 0 && (
@@ -78,7 +85,7 @@ export default function LoadingProgress({ progress }) {
                   <span className="text-gray-600">{label}</span>
                   <span className="text-gray-500">
                     {formatNumber(data?.fetched)}
-                    {total && ` / ${formatNumber(total)}`}
+                    {total ? ` / ${formatNumber(total)}` : (isRefresh ? ' new' : '')}
                     {pct !== null && ` (${pct}%)`}
                     {isRateLimited && data?.secondsRemaining && (
                       <span className="text-orange-500 ml-2">
@@ -87,7 +94,7 @@ export default function LoadingProgress({ progress }) {
                     )}
                   </span>
                 </div>
-                {total && (
+                {total && total > 0 && (
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-300 ${
