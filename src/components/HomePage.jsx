@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchTrendingRepos } from '../services/trendingScraper';
+import { getCachedRepos } from '../services/supabase';
 
 const PERIODS = [
   { key: 'daily', label: 'Daily Trending', param: 'daily' },
@@ -31,7 +33,8 @@ function setCache(data) {
   } catch {}
 }
 
-export default function HomePage() {
+export default function HomePage({ onRepoSelect }) {
+  const navigate = useNavigate();
   const [trendingData, setTrendingData] = useState({
     daily: { repos: [], loading: true, error: null },
     weekly: { repos: [], loading: true, error: null },
@@ -39,6 +42,14 @@ export default function HomePage() {
   });
   const [sortBy, setSortBy] = useState('starsGained');
   const [fetchedAt, setFetchedAt] = useState(null);
+
+  // Repo lookup dropdown state
+  const [cachedRepos, setCachedRepos] = useState([]);
+  const [repoSearchTerm, setRepoSearchTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const dropdownRef = useRef(null);
+  const listRef = useRef(null);
 
   useEffect(() => {
     // Check cache first
@@ -70,6 +81,79 @@ export default function HomePage() {
     });
   }, []);
 
+  // Load cached repos for dropdown
+  useEffect(() => {
+    getCachedRepos().then(setCachedRepos);
+  }, []);
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightedIndex];
+      if (item) item.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
+  // Reset highlight when search changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [repoSearchTerm]);
+
+  const filteredRepos = cachedRepos
+    .filter(repo => `${repo.owner}/${repo.repo}`.toLowerCase().includes(repoSearchTerm.toLowerCase()))
+    .sort((a, b) => `${a.owner}/${a.repo}`.localeCompare(`${b.owner}/${b.repo}`));
+
+  const handleRepoSelect = (repo) => {
+    onRepoSelect(repo.owner, repo.repo);
+    setRepoSearchTerm('');
+    setIsDropdownOpen(false);
+    setHighlightedIndex(-1);
+    navigate('/lookup');
+  };
+
+  const handleKeyDown = (e) => {
+    if (!isDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        setIsDropdownOpen(true);
+        setHighlightedIndex(0);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev < filteredRepos.length - 1 ? prev + 1 : 0);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : filteredRepos.length - 1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredRepos.length) {
+          handleRepoSelect(filteredRepos[highlightedIndex]);
+        }
+        break;
+      case 'Escape':
+        setIsDropdownOpen(false);
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
   const getSortedRepos = (repos) => {
     return [...repos].sort((a, b) => {
       if (sortBy === 'starsGained') return b.starsGained - a.starsGained;
@@ -84,6 +168,53 @@ export default function HomePage() {
 
   return (
     <div>
+      {/* Repo Lookup Dropdown */}
+      {cachedRepos.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Quick Repo Lookup</h3>
+          <div className="relative" ref={dropdownRef}>
+            <input
+              type="text"
+              value={repoSearchTerm}
+              onChange={(e) => {
+                setRepoSearchTerm(e.target.value);
+                setIsDropdownOpen(true);
+              }}
+              onFocus={() => setIsDropdownOpen(true)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search cached repositories..."
+              className="w-full px-3 py-2 pr-10 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+
+            {isDropdownOpen && filteredRepos.length > 0 && (
+              <div ref={listRef} className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {filteredRepos.map((repo, index) => (
+                  <button
+                    key={repo.id}
+                    onClick={() => handleRepoSelect(repo)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    className={`w-full px-3 py-2 text-left text-sm text-gray-700 focus:outline-none ${
+                      index === highlightedIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    {repo.owner}/{repo.repo}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {isDropdownOpen && repoSearchTerm && filteredRepos.length === 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+                <p className="text-sm text-gray-500">No repositories found</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">GitHub Trending</h2>

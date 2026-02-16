@@ -650,7 +650,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <Routes>
             {/* Home - Trending Overview */}
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<HomePage onRepoSelect={handleCachedRepoSelect} />} />
 
             {/* Repo Lookup View */}
             <Route path="/lookup" element={
