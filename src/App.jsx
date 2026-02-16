@@ -543,6 +543,40 @@ function App() {
             </button>
           </div>
 
+          {/* Navigation */}
+          <div className="flex flex-col gap-1 mb-4">
+            <button
+              onClick={() => setActiveView('repoData')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                activeView === 'repoData'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Repo Data
+            </button>
+            <button
+              onClick={() => setActiveView('compare')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                activeView === 'compare'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Repo Compare
+            </button>
+            <button
+              onClick={() => setActiveView('trending')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                activeView === 'trending'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Trending
+            </button>
+          </div>
+
           <div className="flex-1 overflow-y-auto">
             <BatchFetch
               token={token}
@@ -605,41 +639,7 @@ function App() {
       <div className="flex-1 min-w-0">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-4">GitHub Repository Analytics</h1>
-
-            {/* Navigation Tabs */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setActiveView('repoData')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  activeView === 'repoData'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Repo Data
-              </button>
-              <button
-                onClick={() => setActiveView('compare')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  activeView === 'compare'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Repo Compare
-              </button>
-              <button
-                onClick={() => setActiveView('trending')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  activeView === 'trending'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Trending
-              </button>
-            </div>
+            <h1 className="text-3xl font-bold">GitHub Repository Analytics</h1>
           </div>
 
           {/* Repo Data View */}
