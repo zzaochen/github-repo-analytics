@@ -13,17 +13,20 @@ export default function HomePage() {
     weekly: { repos: [], loading: true, error: null },
     monthly: { repos: [], loading: true, error: null }
   });
+  const [sortBy, setSortBy] = useState({
+    daily: 'starsGained',
+    weekly: 'starsGained',
+    monthly: 'starsGained'
+  });
 
   useEffect(() => {
     // Fetch all three periods in parallel
     PERIODS.forEach(({ key, param }) => {
       fetchTrendingRepos(param)
         .then(repos => {
-          // Sort by stars gained descending
-          const sorted = [...repos].sort((a, b) => b.starsGained - a.starsGained);
           setTrendingData(prev => ({
             ...prev,
-            [key]: { repos: sorted, loading: false, error: null }
+            [key]: { repos, loading: false, error: null }
           }));
         })
         .catch(err => {
@@ -34,6 +37,13 @@ export default function HomePage() {
         });
     });
   }, []);
+
+  const getSortedRepos = (repos, sortKey) => {
+    return [...repos].sort((a, b) => {
+      if (sortKey === 'starsGained') return b.starsGained - a.starsGained;
+      return b.stars - a.stars;
+    });
+  };
 
   const formatNumber = (num) => {
     if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
@@ -85,12 +95,26 @@ export default function HomePage() {
                       <tr className="text-left text-gray-500 text-xs">
                         <th className="pb-2 font-medium">#</th>
                         <th className="pb-2 font-medium">Repository</th>
-                        <th className="pb-2 font-medium text-right">Stars</th>
-                        <th className="pb-2 font-medium text-right">New</th>
+                        <th className="pb-2 font-medium text-right">
+                          <button
+                            onClick={() => setSortBy(prev => ({ ...prev, [key]: 'stars' }))}
+                            className={`hover:text-gray-900 ${sortBy[key] === 'stars' ? 'text-blue-600' : ''}`}
+                          >
+                            Stars {sortBy[key] === 'stars' && '▼'}
+                          </button>
+                        </th>
+                        <th className="pb-2 font-medium text-right">
+                          <button
+                            onClick={() => setSortBy(prev => ({ ...prev, [key]: 'starsGained' }))}
+                            className={`hover:text-gray-900 ${sortBy[key] === 'starsGained' ? 'text-blue-600' : ''}`}
+                          >
+                            New {sortBy[key] === 'starsGained' && '▼'}
+                          </button>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {repos.slice(0, 15).map((repo, index) => (
+                      {getSortedRepos(repos, sortBy[key]).slice(0, 15).map((repo, index) => (
                         <tr key={repo.fullName} className="border-t border-gray-100">
                           <td className="py-1.5 text-gray-400">{index + 1}</td>
                           <td className="py-1.5">
