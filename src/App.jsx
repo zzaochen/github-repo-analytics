@@ -131,6 +131,11 @@ function App() {
       const updateProgress = silent ? () => {} : (update) => {
         setProgress(prev => ({
           ...prev,
+          totals: {
+            stars: info.stars,
+            forks: info.forks,
+            issues: info.openIssues
+          },
           [update.type]: {
             fetched: update.fetched,
             partial: update.partial,
