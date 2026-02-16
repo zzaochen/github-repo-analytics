@@ -614,16 +614,6 @@ function App() {
             </Link>
             <nav className="flex items-center gap-6">
               <Link
-                to="/"
-                className={`text-sm font-medium transition-colors ${
-                  location.pathname === '/'
-                    ? 'text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Home
-              </Link>
-              <Link
                 to="/lookup"
                 className={`text-sm font-medium transition-colors ${
                   location.pathname === '/lookup'
