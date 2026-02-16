@@ -14,6 +14,7 @@ export default function HomePage() {
     monthly: { repos: [], loading: true, error: null }
   });
   const [sortBy, setSortBy] = useState('starsGained');
+  const [fetchedAt, setFetchedAt] = useState(null);
 
   useEffect(() => {
     // Fetch all three periods in parallel
@@ -24,6 +25,7 @@ export default function HomePage() {
             ...prev,
             [key]: { repos, loading: false, error: null }
           }));
+          if (!fetchedAt) setFetchedAt(new Date());
         })
         .catch(err => {
           setTrendingData(prev => ({
@@ -51,7 +53,14 @@ export default function HomePage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">GitHub Trending</h2>
-          <p className="text-gray-500 text-sm">Discover the most popular repositories right now</p>
+          <p className="text-gray-500 text-sm">
+            Discover the most popular repositories right now
+            {fetchedAt && (
+              <span className="text-gray-400">
+                {' '}(as of {fetchedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-gray-500">Sort by:</span>
