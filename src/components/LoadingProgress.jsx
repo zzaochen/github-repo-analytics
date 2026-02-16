@@ -14,24 +14,27 @@ export default function LoadingProgress({ progress }) {
   const metrics = [
     { key: 'stars', label: isRefresh ? 'New Stars' : 'Stars', data: stars, total: totals?.stars },
     { key: 'forks', label: isRefresh ? 'New Forks' : 'Forks', data: forks, total: totals?.forks },
-    { key: 'issues', label: 'Issues', data: issues, total: isRefresh ? null : totals?.issues },
-    { key: 'prs', label: 'PRs', data: prs, total: null },
-    { key: 'commits', label: 'Commits', data: commits, total: null },
+    { key: 'issues', label: isRefresh ? 'New Issues' : 'Issues', data: issues, total: isRefresh ? null : totals?.issues },
+    { key: 'prs', label: isRefresh ? 'New PRs' : 'PRs', data: prs, total: null },
+    { key: 'commits', label: isRefresh ? 'New Commits' : 'Commits', data: commits, total: null },
   ];
 
-  const activeMetrics = metrics.filter(m => m.data?.fetched > 0 || m.data?.rateLimit);
+  // During refresh, show all metrics; otherwise only show active ones
+  const activeMetrics = isRefresh
+    ? metrics
+    : metrics.filter(m => m.data?.fetched > 0 || m.data?.rateLimit);
 
-  // Calculate overall progress
+  // Calculate overall progress (cap fetched at expected to avoid >100%)
   const overallProgress = (() => {
     let totalFetched = 0;
     let totalExpected = 0;
 
     if (stars?.fetched && totals?.stars) {
-      totalFetched += stars.fetched;
+      totalFetched += Math.min(stars.fetched, totals.stars);
       totalExpected += totals.stars;
     }
     if (forks?.fetched && totals?.forks) {
-      totalFetched += forks.fetched;
+      totalFetched += Math.min(forks.fetched, totals.forks);
       totalExpected += totals.forks;
     }
 
@@ -70,17 +73,22 @@ export default function LoadingProgress({ progress }) {
       {activeMetrics.length > 0 && (
         <div className="space-y-3">
           {activeMetrics.map(({ key, label, data, total }) => {
-            const pct = getPercentage(data?.fetched, total);
+            // Cap fetched at total so display never shows more than expected
+            const fetched = data?.fetched || 0;
+            const displayFetched = total ? Math.min(fetched, total) : fetched;
+            const pct = getPercentage(displayFetched, total);
             const isRateLimited = data?.rateLimit;
+            const isComplete = total && displayFetched >= total;
 
             return (
               <div key={key}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600">{label}</span>
                   <span className="text-gray-500">
-                    {formatNumber(data?.fetched)}
-                    {total ? ` / ${formatNumber(total)}` : (isRefresh ? ' new' : '')}
+                    {formatNumber(displayFetched)}
+                    {total ? ` / ${formatNumber(total)}` : (isRefresh && fetched > 0 ? ' new' : '')}
                     {pct !== null && ` (${pct}%)`}
+                    {isComplete && <span className="text-green-500 ml-1">✓</span>}
                     {isRateLimited && data?.secondsRemaining && (
                       <span className="text-orange-500 ml-2">
                         Rate limited - {data.secondsRemaining}s
@@ -92,7 +100,7 @@ export default function LoadingProgress({ progress }) {
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-300 ${
-                        isRateLimited ? 'bg-orange-400' : 'bg-blue-500'
+                        isRateLimited ? 'bg-orange-400' : isComplete ? 'bg-green-500' : 'bg-blue-500'
                       }`}
                       style={{ width: `${pct || 0}%` }}
                     />
