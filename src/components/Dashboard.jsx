@@ -52,7 +52,7 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
         return {
           color: 'green',
           label: 'Fetched from GitHub',
-          detail: 'Full historical fetch'
+          detail: 'Data up to date'
         };
     }
   };
