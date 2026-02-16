@@ -641,7 +641,7 @@ function App() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Trending
+                GitHub Trending
               </Link>
             </nav>
           </div>
