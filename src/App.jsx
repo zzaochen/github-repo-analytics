@@ -543,45 +543,46 @@ function App() {
             </button>
           </div>
 
-          {/* Navigation */}
-          <div className="flex flex-col gap-1 mb-4">
-            <button
-              onClick={() => setActiveView('repoData')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                activeView === 'repoData'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Repo Data
-            </button>
-            <button
-              onClick={() => setActiveView('compare')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                activeView === 'compare'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Repo Compare
-            </button>
-            <button
-              onClick={() => setActiveView('trending')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                activeView === 'trending'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Trending
-            </button>
-          </div>
-
           <div className="flex-1 overflow-y-auto">
             <BatchFetch
               token={token}
               onComplete={() => setCacheKey(k => k + 1)}
             />
+
+            {/* Navigation */}
+            <div className="flex flex-col gap-1 mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Views</h3>
+              <button
+                onClick={() => setActiveView('repoData')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                  activeView === 'repoData'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Repo Data
+              </button>
+              <button
+                onClick={() => setActiveView('compare')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                  activeView === 'compare'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Repo Compare
+              </button>
+              <button
+                onClick={() => setActiveView('trending')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                  activeView === 'trending'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Trending
+              </button>
+            </div>
           </div>
 
           <div>
