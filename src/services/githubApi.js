@@ -342,7 +342,7 @@ export async function fetchAllStargazers(octokit, owner, repo, onProgress, since
   };
 }
 
-export async function fetchAllForks(octokit, owner, repo, onProgress, startPage = 1, onSave = null) {
+export async function fetchAllForks(octokit, owner, repo, onProgress, startPage = 1, onSave = null, sinceDate = null) {
   const forks = [];
   let currentPage = startPage;
   const perPage = 100;
@@ -352,7 +352,15 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
   let lastSaveCount = 0;
   let hasMore = true;
 
-  console.log(`Fetching forks${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'} with ${PARALLEL_REQUESTS}x parallelism...`);
+  // If we have sinceDate but no saved page (startPage=1), use 'newest' sort and stop at old forks
+  const useNewestSort = sinceDate && startPage === 1;
+  const sortOrder = useNewestSort ? 'newest' : 'oldest';
+  const sinceDateObj = sinceDate ? new Date(sinceDate) : null;
+
+  const fetchMode = startPage > 1 ? `(resuming from page ${startPage})` :
+                    sinceDate ? `(incremental since ${sinceDate})` :
+                    '(full fetch)';
+  console.log(`Fetching forks ${fetchMode}, sort: ${sortOrder}, with ${PARALLEL_REQUESTS}x parallelism...`);
 
   while (hasMore) {
     // Fetch multiple pages in parallel
@@ -362,7 +370,7 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
         repo,
         per_page: perPage,
         page,
-        sort: 'oldest'
+        sort: sortOrder
       });
       return { data, headers, page };
     };
@@ -402,11 +410,23 @@ export async function fetchAllForks(octokit, owner, repo, onProgress, startPage 
           break;
         }
 
+        let hitOldFork = false;
         for (const f of data) {
+          // If using newest sort with sinceDate, stop when hitting old forks
+          if (useNewestSort && sinceDateObj && new Date(f.created_at) <= sinceDateObj) {
+            hitOldFork = true;
+            break;
+          }
           forks.push({
             owner: f.owner.login,
             createdAt: f.created_at
           });
+        }
+
+        if (hitOldFork) {
+          console.log(`Stopping at old fork (${forks.length} new forks found)`);
+          gotEmptyPage = true; // Signal to stop
+          break;
         }
 
         lastPage = page;
@@ -589,7 +609,7 @@ export async function fetchAllIssues(octokit, owner, repo, onProgress, sinceDate
   };
 }
 
-export async function fetchAllPullRequests(octokit, owner, repo, onProgress, startPage = 1, onSave = null) {
+export async function fetchAllPullRequests(octokit, owner, repo, onProgress, startPage = 1, onSave = null, sinceDate = null) {
   const prs = [];
   let currentPage = startPage;
   const perPage = 100;
@@ -599,7 +619,15 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
   let lastSaveCount = 0;
   let hasMore = true;
 
-  console.log(`Fetching PRs${startPage > 1 ? ` (resuming from page ${startPage})` : ' (full fetch)'} with ${PARALLEL_REQUESTS}x parallelism...`);
+  // If we have sinceDate but no saved page (startPage=1), use 'desc' direction and stop at old PRs
+  const useDescDirection = sinceDate && startPage === 1;
+  const direction = useDescDirection ? 'desc' : 'asc';
+  const sinceDateObj = sinceDate ? new Date(sinceDate) : null;
+
+  const fetchMode = startPage > 1 ? `(resuming from page ${startPage})` :
+                    sinceDate ? `(incremental since ${sinceDate})` :
+                    '(full fetch)';
+  console.log(`Fetching PRs ${fetchMode}, direction: ${direction}, with ${PARALLEL_REQUESTS}x parallelism...`);
 
   while (hasMore) {
     const fetchPage = async (page) => {
@@ -610,7 +638,7 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
         per_page: perPage,
         page,
         sort: 'created',
-        direction: 'asc'
+        direction: direction
       });
       return { data, headers, page };
     };
@@ -647,7 +675,13 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
           break;
         }
 
+        let hitOldPR = false;
         for (const pr of data) {
+          // If using desc direction with sinceDate, stop when hitting old PRs
+          if (useDescDirection && sinceDateObj && new Date(pr.created_at) <= sinceDateObj) {
+            hitOldPR = true;
+            break;
+          }
           prs.push({
             number: pr.number,
             state: pr.state,
@@ -655,6 +689,12 @@ export async function fetchAllPullRequests(octokit, owner, repo, onProgress, sta
             closedAt: pr.closed_at,
             mergedAt: pr.merged_at
           });
+        }
+
+        if (hitOldPR) {
+          console.log(`Stopping at old PR (${prs.length} new PRs found)`);
+          gotEmptyPage = true; // Signal to stop
+          break;
         }
 
         lastPage = page;

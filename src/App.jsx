@@ -202,17 +202,21 @@ function App() {
       const issuesSinceDate = resumeState?.issues?.lastDate || null;
       const prsStartPage = resumeState?.prs?.lastPage ? resumeState.prs.lastPage + 1 : 1;
       const commitsSinceDate = resumeState?.commits?.lastDate || null;
-      // For stars: use sinceDate for incremental fetch when no cursor is available
-      const starsSinceDate = resumeState?.sinceDate || null;
+      // Use sinceDate for incremental fetch when no cursor/lastPage is available
+      const sinceDate = resumeState?.sinceDate || null;
+      // Only use sinceDate if we don't have a saved position
+      const starsSinceDate = starsCursor ? null : sinceDate;
+      const forksSinceDate = forksStartPage > 1 ? null : sinceDate;
+      const prsSinceDate = prsStartPage > 1 ? null : sinceDate;
 
       setProgress(prev => ({ ...prev, status: 'Fetching all data...' }));
 
       // Fetch all data types in parallel for speed, with incremental saving
       const [starsResult, forksResult, issuesResult, prsResult, commitsResult] = await Promise.all([
         fetchAllStargazersGraphQL(token, owner, repo, updateProgress, starsCursor, onSave, starsSinceDate),
-        fetchAllForks(octokit, owner, repo, updateProgress, forksStartPage, onSave),
+        fetchAllForks(octokit, owner, repo, updateProgress, forksStartPage, onSave, forksSinceDate),
         fetchAllIssues(octokit, owner, repo, updateProgress, issuesSinceDate, onSave),
-        fetchAllPullRequests(octokit, owner, repo, updateProgress, prsStartPage, onSave),
+        fetchAllPullRequests(octokit, owner, repo, updateProgress, prsStartPage, onSave, prsSinceDate),
         fetchContributorCommits(octokit, owner, repo, updateProgress, commitsSinceDate, onSave)
       ]);
 
