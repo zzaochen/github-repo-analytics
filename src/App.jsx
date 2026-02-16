@@ -250,18 +250,19 @@ function App() {
       }
 
       // Track fetch state for all metrics
+      // ALWAYS save cursor/lastPage so refresh operations can resume from there
       const fetchState = {
         stars: {
           lastPage: null, // Not used for GraphQL
           limited: starsResult.hasMorePages || starsResult.hitRateLimit,
-          cursor: starsResult.hasMorePages || starsResult.hitRateLimit ? starsResult.lastCursor : null
+          cursor: starsResult.lastCursor // Always save cursor for incremental refresh
         },
         forks: {
-          lastPage: forksResult.hitPaginationLimit ? forksResult.lastPage : null,
+          lastPage: forksResult.lastPage, // Always save for incremental refresh
           limited: forksResult.hitPaginationLimit
         },
         prs: {
-          lastPage: prsResult.hitPaginationLimit ? prsResult.lastPage : null,
+          lastPage: prsResult.lastPage, // Always save for incremental refresh
           limited: prsResult.hitPaginationLimit
         },
         issues: {
