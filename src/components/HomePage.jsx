@@ -7,6 +7,30 @@ const PERIODS = [
   { key: 'monthly', label: 'Monthly Trending', param: 'monthly' }
 ];
 
+const CACHE_KEY = 'trending_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function getCache() {
+  try {
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_DURATION) {
+      sessionStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function setCache(data) {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch {}
+}
+
 export default function HomePage() {
   const [trendingData, setTrendingData] = useState({
     daily: { repos: [], loading: true, error: null },
@@ -17,22 +41,32 @@ export default function HomePage() {
   const [fetchedAt, setFetchedAt] = useState(null);
 
   useEffect(() => {
+    // Check cache first
+    const cached = getCache();
+    if (cached) {
+      setTrendingData(cached.trendingData);
+      setFetchedAt(new Date(cached.fetchedAt));
+      return;
+    }
+
     // Fetch all three periods in parallel
-    PERIODS.forEach(({ key, param }) => {
+    const fetchPromises = PERIODS.map(({ key, param }) =>
       fetchTrendingRepos(param)
-        .then(repos => {
-          setTrendingData(prev => ({
-            ...prev,
-            [key]: { repos, loading: false, error: null }
-          }));
-          if (!fetchedAt) setFetchedAt(new Date());
-        })
-        .catch(err => {
-          setTrendingData(prev => ({
-            ...prev,
-            [key]: { repos: [], loading: false, error: err.message }
-          }));
-        });
+        .then(repos => ({ key, repos, error: null }))
+        .catch(err => ({ key, repos: [], error: err.message }))
+    );
+
+    Promise.all(fetchPromises).then(results => {
+      const newData = { ...trendingData };
+      results.forEach(({ key, repos, error }) => {
+        newData[key] = { repos, loading: false, error };
+      });
+      setTrendingData(newData);
+      const now = new Date();
+      setFetchedAt(now);
+
+      // Cache the results
+      setCache({ trendingData: newData, fetchedAt: now.toISOString() });
     });
   }, []);
 

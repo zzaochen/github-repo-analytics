@@ -2,7 +2,7 @@ import { Octokit } from '@octokit/rest';
 import { graphql } from '@octokit/graphql';
 
 // Number of parallel requests to make (balance between speed and rate limits)
-const PARALLEL_REQUESTS = 5;
+const PARALLEL_REQUESTS = 10;
 
 export function createGitHubClient(token) {
   return new Octokit({ auth: token });
