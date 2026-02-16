@@ -501,10 +501,34 @@ export default async function handler(req, res) {
           continue;
         }
 
-        console.log(`Refreshing ${repoName} (last data: ${lastDate || 'none'})...`);
+        // Go back 1 day to ensure we don't miss any data from partial syncs or timezone issues
+        // The upsert will handle any duplicates
+        const overlapDays = 1;
+        let sinceDate = null;
+        let baseMetric = lastMetric;
 
-        // Fetch new data since last date (efficient - only fetches new data)
-        const sinceDate = lastDate ? `${lastDate}T23:59:59Z` : null;
+        if (lastDate) {
+          const lastDateObj = new Date(lastDate);
+          lastDateObj.setDate(lastDateObj.getDate() - overlapDays);
+          const overlapDate = lastDateObj.toISOString().split('T')[0];
+          sinceDate = `${overlapDate}T00:00:00Z`;
+
+          // Get the metric from before the overlap period to use as base for running totals
+          const { data: overlapBaseMetric } = await supabase
+            .from('daily_metrics')
+            .select('*')
+            .eq('repo_id', repo.id)
+            .lt('date', overlapDate)
+            .order('date', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (overlapBaseMetric) {
+            baseMetric = overlapBaseMetric;
+          }
+        }
+
+        console.log(`Refreshing ${repoName} (last data: ${lastDate || 'none'}, fetching since: ${sinceDate || 'beginning'})...`);
 
         const [newStars, newForks, newIssues, newPRs, newCommits] = await Promise.all([
           fetchNewStargazersGraphQL(githubToken, repo.owner, repo.repo, sinceDate),
@@ -521,9 +545,9 @@ export default async function handler(req, res) {
           newStars, newForks, newIssues, newPRs, newCommits, sinceDate
         );
 
-        // Save to database
+        // Save to database (uses baseMetric from before overlap for correct running totals)
         if (newDailyData.length > 0) {
-          await saveNewDailyMetrics(supabase, repo.id, newDailyData, lastMetric);
+          await saveNewDailyMetrics(supabase, repo.id, newDailyData, baseMetric);
           console.log(`  Saved ${newDailyData.length} new daily records`);
         }
 

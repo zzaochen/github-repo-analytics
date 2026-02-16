@@ -328,6 +328,14 @@ function App() {
     }
   };
 
+  // Helper to get overlap date (1 day before) to ensure we don't miss data
+  const getOverlapDate = (dateStr) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() - 1);
+    return date.toISOString().split('T')[0];
+  };
+
   // Handle "Update to Today" button - fetch new data since last cached date
   const handleUpdateToToday = async () => {
     if (!repoInfo) return;
@@ -342,17 +350,18 @@ function App() {
 
     try {
       const cached = await getRepoFromCache(owner, repo);
-      // Use full fetch state from cache for incremental updates
-      // This ensures stars/forks/prs resume from where they left off
+      // Use 1-day overlap for issues/commits to ensure we don't miss data
+      // Stars/forks/prs use cursor/page-based resumption which is precise
+      const overlapDate = getOverlapDate(cached?.lastDate);
       const resumeState = cached?.fetchState ? {
         stars: cached.fetchState.stars,
         forks: cached.fetchState.forks,
         prs: cached.fetchState.prs,
-        issues: { lastDate: cached.lastDate },
-        commits: { lastDate: cached.lastDate }
+        issues: { lastDate: overlapDate },
+        commits: { lastDate: overlapDate }
       } : {
-        issues: { lastDate: cached?.lastDate },
-        commits: { lastDate: cached?.lastDate }
+        issues: { lastDate: overlapDate },
+        commits: { lastDate: overlapDate }
       };
 
       await fetchData(owner, repo, token, resumeState);
@@ -433,15 +442,17 @@ function App() {
           }
 
           // Use full fetch state from cache for incremental updates
+          // Use 1-day overlap for issues/commits to ensure we don't miss data
+          const overlapDate = getOverlapDate(cached?.lastDate);
           const resumeState = cached?.fetchState ? {
             stars: cached.fetchState.stars,
             forks: cached.fetchState.forks,
             prs: cached.fetchState.prs,
-            issues: { lastDate: cached.lastDate },
-            commits: { lastDate: cached.lastDate }
+            issues: { lastDate: overlapDate },
+            commits: { lastDate: overlapDate }
           } : {
-            issues: { lastDate: cached?.lastDate },
-            commits: { lastDate: cached?.lastDate }
+            issues: { lastDate: overlapDate },
+            commits: { lastDate: overlapDate }
           };
 
           await fetchData(repo.owner, repo.repo, token, resumeState, true); // silent mode
