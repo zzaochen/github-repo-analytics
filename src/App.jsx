@@ -342,8 +342,15 @@ function App() {
 
     try {
       const cached = await getRepoFromCache(owner, repo);
-      // Use the last date as the "since" date for issues/commits
-      const resumeState = {
+      // Use full fetch state from cache for incremental updates
+      // This ensures stars/forks/prs resume from where they left off
+      const resumeState = cached?.fetchState ? {
+        stars: cached.fetchState.stars,
+        forks: cached.fetchState.forks,
+        prs: cached.fetchState.prs,
+        issues: { lastDate: cached.lastDate },
+        commits: { lastDate: cached.lastDate }
+      } : {
         issues: { lastDate: cached?.lastDate },
         commits: { lastDate: cached?.lastDate }
       };
