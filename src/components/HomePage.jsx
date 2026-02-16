@@ -168,10 +168,10 @@ export default function HomePage({ onRepoSelect }) {
 
   return (
     <div>
-      {/* Repo Lookup Dropdown */}
+      {/* Repo Search */}
       {cachedRepos.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Quick Repo Lookup</h3>
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">Repo Search</h2>
           <div className="relative" ref={dropdownRef}>
             <input
               type="text"
