@@ -191,7 +191,7 @@ function App() {
       const prsStartPage = resumeState?.prs?.lastPage ? resumeState.prs.lastPage + 1 : 1;
       const commitsSinceDate = resumeState?.commits?.lastDate || null;
 
-      setProgress(prev => ({ ...prev, status: 'Fetching all data (parallel)...' }));
+      setProgress(prev => ({ ...prev, status: 'Fetching all data...' }));
 
       // Fetch all data types in parallel for speed, with incremental saving
       const [starsResult, forksResult, issuesResult, prsResult, commitsResult] = await Promise.all([
