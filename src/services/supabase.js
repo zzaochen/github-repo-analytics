@@ -796,3 +796,28 @@ export function mergeDailyMetrics(existingMetrics, newMetrics) {
     };
   });
 }
+
+// Get the last cron run from cron_logs table
+export async function getLastCronRun() {
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('cron_logs')
+      .select('*')
+      .eq('job_name', 'check-trending')
+      .order('run_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.log('No cron logs found or error:', error.message);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching last cron run:', error);
+    return null;
+  }
+}

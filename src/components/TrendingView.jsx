@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchTrendingRepos, filterNewRepos } from '../services/trendingScraper';
-import { getCachedRepos } from '../services/supabase';
+import { getCachedRepos, getLastCronRun } from '../services/supabase';
 import {
   createGitHubClient,
   fetchRepoInfo,
@@ -42,6 +42,12 @@ export default function TrendingView({ token }) {
   const [autoFetchEnabled, setAutoFetchEnabled] = useState(false);
   const [discoveryDates, setDiscoveryDates] = useState({}); // { 'owner/repo': Date }
   const [skippedRepos, setSkippedRepos] = useState(() => loadSkippedRepos()); // Persisted skipped repos
+  const [lastCronRun, setLastCronRun] = useState(null);
+
+  // Fetch last cron run on mount
+  useEffect(() => {
+    getLastCronRun().then(setLastCronRun);
+  }, []);
 
   const checkTrending = async () => {
     setLoading(true);
@@ -268,6 +274,37 @@ export default function TrendingView({ token }) {
         {!token && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">
             Enter a GitHub token in Settings to enable auto-fetching
+          </div>
+        )}
+
+        {/* Last Cron Run Status */}
+        {lastCronRun && (
+          <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm text-gray-600">
+                  <strong>Last automated check:</strong>{' '}
+                  {new Date(lastCronRun.run_at).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span>Trending: {lastCronRun.trending_count || 0}</span>
+                <span>New: {lastCronRun.new_repos_count || 0}</span>
+                <span>Fetched: {lastCronRun.fetched_count || 0}</span>
+                {lastCronRun.errors?.length > 0 && (
+                  <span className="text-red-500">Errors: {lastCronRun.errors.length}</span>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
