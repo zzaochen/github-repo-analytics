@@ -550,8 +550,8 @@ function App() {
             />
 
             {/* GitHub Repositories */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">GitHub Repositories</h3>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">GitHub Repositories</h3>
               <div className="flex flex-col gap-1">
                 <button
                   onClick={() => setActiveView('repoData')}
@@ -577,7 +577,8 @@ function App() {
             </div>
 
             {/* Trending */}
-            <div className="mb-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">GitHub Trending</h3>
               <button
                 onClick={() => setActiveView('trending')}
                 className={`w-full px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
