@@ -287,14 +287,21 @@ export default function TrendingView({ token }) {
                 </svg>
                 <span className="text-sm text-gray-600">
                   <strong>Last automated check:</strong>{' '}
-                  {new Date(lastCronRun.run_at).toLocaleString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'America/New_York'
-                  })} EST
+                  {(() => {
+                    // Ensure timestamp is treated as UTC
+                    let ts = lastCronRun.run_at;
+                    if (!ts.endsWith('Z') && !ts.includes('+')) {
+                      ts = ts + 'Z';
+                    }
+                    return new Date(ts).toLocaleString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'America/New_York'
+                    });
+                  })()} EST
                 </span>
               </div>
               <div className="flex items-center gap-4 text-xs text-gray-500">
