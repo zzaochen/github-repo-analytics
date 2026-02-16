@@ -65,12 +65,6 @@ export default function LoadingProgress({ progress }) {
         )}
       </div>
 
-      {/* Show existing counts context for refresh */}
-      {isRefresh && existingCounts && (
-        <div className="text-sm text-gray-500 mb-3">
-          Cached: {formatNumber(existingCounts.stars)} stars, {formatNumber(existingCounts.forks)} forks
-        </div>
-      )}
 
       {/* Progress bars for each metric */}
       {activeMetrics.length > 0 && (

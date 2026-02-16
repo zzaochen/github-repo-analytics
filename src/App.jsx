@@ -372,8 +372,16 @@ function App() {
       // Use 1-day overlap for issues/commits to ensure we don't miss data
       const overlapDate = getOverlapDate(cached?.lastDate);
 
+      // Debug logging
+      console.log('=== Update to Today Debug ===');
+      console.log('cached.lastDate:', cached?.lastDate);
+      console.log('overlapDate:', overlapDate);
+      console.log('cached.fetchState:', JSON.stringify(cached?.fetchState, null, 2));
+
       // For stars: if we have a cursor, use it; otherwise use sinceDate for incremental fetch
       const hasCursor = cached?.fetchState?.stars?.cursor;
+      console.log('hasCursor:', hasCursor);
+
       const resumeState = cached?.fetchState ? {
         stars: cached.fetchState.stars,
         forks: cached.fetchState.forks,
@@ -387,6 +395,9 @@ function App() {
         commits: { lastDate: overlapDate },
         sinceDate: overlapDate ? `${overlapDate}T00:00:00Z` : null
       };
+
+      console.log('resumeState.sinceDate:', resumeState.sinceDate);
+      console.log('=== End Debug ===');
 
       // Get existing counts from last cached metric for progress display
       const lastMetric = cached?.metrics?.[cached.metrics.length - 1];
