@@ -549,32 +549,38 @@ function App() {
               onComplete={() => setCacheKey(k => k + 1)}
             />
 
-            {/* Navigation */}
-            <div className="flex flex-col gap-1 mb-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Views</h3>
-              <button
-                onClick={() => setActiveView('repoData')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                  activeView === 'repoData'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Repo Data
-              </button>
-              <button
-                onClick={() => setActiveView('compare')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                  activeView === 'compare'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Repo Compare
-              </button>
+            {/* GitHub Repositories */}
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">GitHub Repositories</h3>
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={() => setActiveView('repoData')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                    activeView === 'repoData'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Repo Lookup
+                </button>
+                <button
+                  onClick={() => setActiveView('compare')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                    activeView === 'compare'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Metrics Comparison
+                </button>
+              </div>
+            </div>
+
+            {/* Trending */}
+            <div className="mb-4">
               <button
                 onClick={() => setActiveView('trending')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
                   activeView === 'trending'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
