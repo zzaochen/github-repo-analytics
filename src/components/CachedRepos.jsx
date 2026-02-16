@@ -6,8 +6,10 @@ export default function CachedRepos({ onSelect, isLoading }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+  const listRef = useRef(null);
 
   useEffect(() => {
     loadCachedRepos();
@@ -41,7 +43,59 @@ export default function CachedRepos({ onSelect, isLoading }) {
     onSelect(repo.owner, repo.repo);
     setSearchTerm('');
     setIsOpen(false);
+    setHighlightedIndex(-1);
   };
+
+  const handleKeyDown = (e) => {
+    if (!isOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        setIsOpen(true);
+        setHighlightedIndex(0);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev =>
+          prev < filteredRepos.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev =>
+          prev > 0 ? prev - 1 : filteredRepos.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredRepos.length) {
+          handleSelect(filteredRepos[highlightedIndex]);
+        }
+        break;
+      case 'Escape':
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightedIndex];
+      if (item) {
+        item.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex]);
+
+  // Reset highlighted index when filtered repos change
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [searchTerm]);
 
   if (loading) {
     return (
@@ -68,6 +122,7 @@ export default function CachedRepos({ onSelect, isLoading }) {
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
           placeholder="Search repositories..."
           disabled={isLoading}
           className="w-full px-3 py-2 pr-10 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -77,12 +132,15 @@ export default function CachedRepos({ onSelect, isLoading }) {
         </svg>
 
         {isOpen && filteredRepos.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-            {filteredRepos.map((repo) => (
+          <div ref={listRef} className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {filteredRepos.map((repo, index) => (
               <button
                 key={repo.id}
                 onClick={() => handleSelect(repo)}
-                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                onMouseEnter={() => setHighlightedIndex(index)}
+                className={`w-full px-3 py-2 text-left text-sm text-gray-700 focus:outline-none ${
+                  index === highlightedIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100'
+                }`}
               >
                 {repo.owner}/{repo.repo}
               </button>

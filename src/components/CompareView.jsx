@@ -37,6 +37,8 @@ export default function CompareView() {
   const [viewMode, setViewMode] = useState('date'); // 'date' or 'indexed'
   const [repoSearchTerm, setRepoSearchTerm] = useState('');
   const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false);
+  const [repoHighlightedIndex, setRepoHighlightedIndex] = useState(-1);
+  const repoListRef = useRef(null);
   // Date range state for metrics chart
   const [metricsDatePreset, setMetricsDatePreset] = useState('all');
   const [metricsStartDate, setMetricsStartDate] = useState('');
@@ -107,6 +109,73 @@ export default function CompareView() {
       }
     }
   };
+
+  // Get filtered available repos for dropdown
+  const getAvailableRepos = () => {
+    return cachedRepos
+      .filter(repo => !selectedRepos.includes(`${repo.owner}/${repo.repo}`))
+      .filter(repo => {
+        const repoKey = `${repo.owner}/${repo.repo}`.toLowerCase();
+        return repoKey.includes(repoSearchTerm.toLowerCase());
+      })
+      .sort((a, b) => `${a.owner}/${a.repo}`.localeCompare(`${b.owner}/${b.repo}`));
+  };
+
+  const handleRepoKeyDown = (e) => {
+    const availableRepos = getAvailableRepos();
+
+    if (!isRepoDropdownOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        setIsRepoDropdownOpen(true);
+        setRepoHighlightedIndex(0);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setRepoHighlightedIndex(prev =>
+          prev < availableRepos.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setRepoHighlightedIndex(prev =>
+          prev > 0 ? prev - 1 : availableRepos.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (repoHighlightedIndex >= 0 && repoHighlightedIndex < availableRepos.length) {
+          handleRepoToggle(availableRepos[repoHighlightedIndex]);
+          setRepoSearchTerm('');
+          setIsRepoDropdownOpen(false);
+          setRepoHighlightedIndex(-1);
+        }
+        break;
+      case 'Escape':
+        setIsRepoDropdownOpen(false);
+        setRepoHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (repoHighlightedIndex >= 0 && repoListRef.current) {
+      const item = repoListRef.current.children[repoHighlightedIndex];
+      if (item) {
+        item.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [repoHighlightedIndex]);
+
+  // Reset highlighted index when search term changes
+  useEffect(() => {
+    setRepoHighlightedIndex(-1);
+  }, [repoSearchTerm]);
 
   // Calculate date range based on preset or custom dates
   const getDateRange = (preset, customStart, customEnd) => {
@@ -423,6 +492,7 @@ export default function CompareView() {
                   setIsRepoDropdownOpen(true);
                 }}
                 onFocus={() => setIsRepoDropdownOpen(true)}
+                onKeyDown={handleRepoKeyDown}
                 placeholder="Search to add..."
                 className="w-full px-3 py-2 pr-10 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -432,26 +502,24 @@ export default function CompareView() {
 
               {isRepoDropdownOpen && (
                 (() => {
-                  const availableRepos = cachedRepos
-                    .filter(repo => !selectedRepos.includes(`${repo.owner}/${repo.repo}`))
-                    .filter(repo => {
-                      const repoKey = `${repo.owner}/${repo.repo}`.toLowerCase();
-                      return repoKey.includes(repoSearchTerm.toLowerCase());
-                    })
-                    .sort((a, b) => `${a.owner}/${a.repo}`.localeCompare(`${b.owner}/${b.repo}`));
+                  const availableRepos = getAvailableRepos();
 
                   if (availableRepos.length > 0) {
                     return (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {availableRepos.map((repo) => (
+                      <div ref={repoListRef} className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {availableRepos.map((repo, index) => (
                           <button
                             key={repo.id}
                             onClick={() => {
                               handleRepoToggle(repo);
                               setRepoSearchTerm('');
                               setIsRepoDropdownOpen(false);
+                              setRepoHighlightedIndex(-1);
                             }}
-                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                            onMouseEnter={() => setRepoHighlightedIndex(index)}
+                            className={`w-full px-3 py-2 text-left text-sm text-gray-700 focus:outline-none ${
+                              index === repoHighlightedIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100'
+                            }`}
                           >
                             {repo.owner}/{repo.repo}
                           </button>
