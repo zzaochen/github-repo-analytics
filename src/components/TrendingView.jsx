@@ -53,10 +53,10 @@ export default function TrendingView({ token }) {
 
   const periodConfig = PERIODS[trendingPeriod];
 
-  // Fetch last cron run on mount
+  // Fetch last cron run when period changes
   useEffect(() => {
-    getLastCronRun().then(setLastCronRun);
-  }, []);
+    getLastCronRun(trendingPeriod).then(setLastCronRun);
+  }, [trendingPeriod]);
 
   const checkTrending = async () => {
     setLoading(true);

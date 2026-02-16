@@ -798,20 +798,21 @@ export function mergeDailyMetrics(existingMetrics, newMetrics) {
 }
 
 // Get the last cron run from cron_logs table
-export async function getLastCronRun() {
+export async function getLastCronRun(period = 'weekly') {
   if (!supabase) return null;
 
   try {
+    const jobName = `check-trending-${period}`;
     const { data, error } = await supabase
       .from('cron_logs')
       .select('*')
-      .eq('job_name', 'check-trending')
+      .eq('job_name', jobName)
       .order('run_at', { ascending: false })
       .limit(1)
       .single();
 
     if (error) {
-      console.log('No cron logs found or error:', error.message);
+      console.log(`No cron logs found for ${jobName} or error:`, error.message);
       return null;
     }
 

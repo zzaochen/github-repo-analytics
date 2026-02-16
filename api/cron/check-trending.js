@@ -49,8 +49,8 @@ function parseTrendingHtml(html) {
 }
 
 // Fetch trending repos from GitHub
-async function fetchTrending() {
-  const url = 'https://github.com/trending?since=weekly';
+async function fetchTrending(period = 'weekly') {
+  const url = `https://github.com/trending?since=${period}`;
   const response = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (compatible; GitHubAnalytics/1.0)',
@@ -128,12 +128,12 @@ async function saveRepoToCache(supabase, owner, repo, repoInfo) {
 }
 
 // Log cron run to a table (optional, for tracking)
-async function logCronRun(supabase, results) {
+async function logCronRun(supabase, results, period = 'weekly') {
   try {
     await supabase
       .from('cron_logs')
       .insert({
-        job_name: 'check-trending',
+        job_name: `check-trending-${period}`,
         run_at: new Date().toISOString(),
         trending_count: results.trendingCount,
         new_repos_count: results.newReposCount,
@@ -167,18 +167,24 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GitHub token not configured' });
   }
 
+  // Get period from query string (default to weekly for backwards compatibility)
+  const period = req.query?.period || 'weekly';
+  const validPeriods = ['daily', 'weekly', 'monthly'];
+  const safePeriod = validPeriods.includes(period) ? period : 'weekly';
+
   const results = {
     trendingCount: 0,
     newReposCount: 0,
     fetchedCount: 0,
     errors: [],
-    newRepos: []
+    newRepos: [],
+    period: safePeriod
   };
 
   try {
     // 1. Fetch trending repos
-    console.log('Fetching GitHub trending...');
-    const trending = await fetchTrending();
+    console.log(`Fetching GitHub ${safePeriod} trending...`);
+    const trending = await fetchTrending(safePeriod);
     results.trendingCount = trending.length;
     console.log(`Found ${trending.length} trending repos`);
 
@@ -207,18 +213,18 @@ export default async function handler(req, res) {
     }
 
     // 5. Log the cron run
-    await logCronRun(supabase, results);
+    await logCronRun(supabase, results, safePeriod);
 
     return res.status(200).json({
       success: true,
-      message: `Processed ${results.fetchedCount} new trending repos`,
+      message: `Processed ${results.fetchedCount} new ${safePeriod} trending repos`,
       ...results
     });
 
   } catch (error) {
     console.error('Cron job failed:', error);
     results.errors.push({ error: error.message });
-    await logCronRun(supabase, results);
+    await logCronRun(supabase, results, safePeriod);
     return res.status(500).json({ error: error.message, ...results });
   }
 }
