@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import LoadingProgress from './components/LoadingProgress';
 import Dashboard from './components/Dashboard';
 import CachedRepos from './components/CachedRepos';
@@ -41,8 +42,8 @@ function App() {
   const [cacheKey, setCacheKey] = useState(0);
   const [starsPaginationLimited, setStarsPaginationLimited] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState('repoData');
   const [token, setToken] = useState('');
+  const location = useLocation();
   const [saveToken, setSaveToken] = useState(true);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [refreshProgress, setRefreshProgress] = useState('');
@@ -549,47 +550,6 @@ function App() {
               onComplete={() => setCacheKey(k => k + 1)}
             />
 
-            {/* GitHub Repositories */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">GitHub Repositories</h3>
-              <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => setActiveView('repoData')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                    activeView === 'repoData'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Repo Lookup
-                </button>
-                <button
-                  onClick={() => setActiveView('compare')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                    activeView === 'compare'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Metrics Comparison
-                </button>
-              </div>
-            </div>
-
-            {/* Trending */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">GitHub Trending</h3>
-              <button
-                onClick={() => setActiveView('trending')}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors ${
-                  activeView === 'trending'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Trending
-              </button>
-            </div>
           </div>
 
           <div>
@@ -645,62 +605,95 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 min-w-0">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold">GitHub Repository Analytics</h1>
+        {/* Top Navigation Bar */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900">GitHub Repository Analytics</h1>
+            <nav className="flex items-center gap-6">
+              <Link
+                to="/"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/'
+                    ? 'text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Repo Lookup
+              </Link>
+              <Link
+                to="/compare"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/compare'
+                    ? 'text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Metrics Comparison
+              </Link>
+              <Link
+                to="/trending"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/trending'
+                    ? 'text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Trending
+              </Link>
+            </nav>
           </div>
+        </div>
 
-          {/* Repo Data View */}
-          {activeView === 'repoData' && (
-            <>
-              <CachedRepos
-                key={cacheKey}
-                onSelect={handleCachedRepoSelect}
-                isLoading={isLoading}
-              />
-
-              {error && (
-                <div className="bg-red-100 border border-red-400 rounded-lg p-4 mb-6">
-                  <p className="text-red-700">{error}</p>
-                </div>
-              )}
-
-              {isLoading && <LoadingProgress progress={progress} />}
-
-              {!isLoading && dailyData && repoInfo && (
-                <Dashboard
-                  repoInfo={repoInfo}
-                  dailyData={dailyData}
-                  dataSource={dataSource}
-                  lastFetched={lastFetched}
-                  onForceRefresh={handleUpdateToToday}
-                  paginationLimited={starsPaginationLimited}
-                  onContinueFetching={handleContinueFetching}
-                  onDeleteAndRefetch={handleDeleteAndRefetch}
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <Routes>
+            {/* Repo Lookup View */}
+            <Route path="/" element={
+              <>
+                <CachedRepos
+                  key={cacheKey}
+                  onSelect={handleCachedRepoSelect}
+                  isLoading={isLoading}
                 />
-              )}
 
-              {!isLoading && !dailyData && (
-                <div className="text-center py-16 text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <p className="text-lg">Enter a repository to analyze</p>
-                  <p className="text-sm mt-1">Or select a cached repository from the sidebar</p>
-                </div>
-              )}
-            </>
-          )}
+                {error && (
+                  <div className="bg-red-100 border border-red-400 rounded-lg p-4 mb-6">
+                    <p className="text-red-700">{error}</p>
+                  </div>
+                )}
 
-          {/* Compare View */}
-          {activeView === 'compare' && (
-            <CompareView />
-          )}
+                {isLoading && <LoadingProgress progress={progress} />}
 
-          {/* Trending View */}
-          {activeView === 'trending' && (
-            <TrendingView token={token} />
-          )}
+                {!isLoading && dailyData && repoInfo && (
+                  <Dashboard
+                    repoInfo={repoInfo}
+                    dailyData={dailyData}
+                    dataSource={dataSource}
+                    lastFetched={lastFetched}
+                    onForceRefresh={handleUpdateToToday}
+                    paginationLimited={starsPaginationLimited}
+                    onContinueFetching={handleContinueFetching}
+                    onDeleteAndRefetch={handleDeleteAndRefetch}
+                  />
+                )}
+
+                {!isLoading && !dailyData && (
+                  <div className="text-center py-16 text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <p className="text-lg">Enter a repository to analyze</p>
+                    <p className="text-sm mt-1">Or select a cached repository from the sidebar</p>
+                  </div>
+                )}
+              </>
+            } />
+
+            {/* Metrics Comparison View */}
+            <Route path="/compare" element={<CompareView />} />
+
+            {/* Trending View */}
+            <Route path="/trending" element={<TrendingView token={token} />} />
+          </Routes>
         </div>
       </div>
     </div>
