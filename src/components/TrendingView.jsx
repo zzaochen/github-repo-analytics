@@ -39,7 +39,7 @@ const PERIODS = {
 };
 
 export default function TrendingView({ token }) {
-  const [trendingPeriod, setTrendingPeriod] = useState('weekly');
+  const [trendingPeriod, setTrendingPeriod] = useState('daily');
   const [trendingRepos, setTrendingRepos] = useState([]);
   const [newRepos, setNewRepos] = useState([]);
   const [loading, setLoading] = useState(false);
