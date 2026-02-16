@@ -80,43 +80,36 @@ export default function HomePage() {
                 )}
 
                 {!loading && !error && repos.length > 0 && (
-                  <div className="space-y-3">
-                    {repos.slice(0, 15).map((repo, index) => (
-                      <div key={repo.fullName} className="flex items-start gap-3">
-                        <span className="text-gray-400 text-sm font-medium w-5 flex-shrink-0">
-                          {index + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <a
-                            href={`https://github.com/${repo.fullName}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline text-sm font-medium block truncate"
-                            title={repo.fullName}
-                          >
-                            {repo.fullName}
-                          </a>
-                          {repo.description && (
-                            <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">
-                              {repo.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                            {repo.language && (
-                              <span className="flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                                {repo.language}
-                              </span>
-                            )}
-                            <span>★ {formatNumber(repo.stars)}</span>
-                            <span className="text-green-600 font-medium">
-                              +{formatNumber(repo.starsGained)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 text-xs">
+                        <th className="pb-2 font-medium">#</th>
+                        <th className="pb-2 font-medium">Repository</th>
+                        <th className="pb-2 font-medium text-right">Stars</th>
+                        <th className="pb-2 font-medium text-right">New</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {repos.slice(0, 15).map((repo, index) => (
+                        <tr key={repo.fullName} className="border-t border-gray-100">
+                          <td className="py-1.5 text-gray-400">{index + 1}</td>
+                          <td className="py-1.5">
+                            <a
+                              href={`https://github.com/${repo.fullName}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline truncate block max-w-[180px]"
+                              title={repo.fullName}
+                            >
+                              {repo.fullName}
+                            </a>
+                          </td>
+                          <td className="py-1.5 text-right text-gray-600">{formatNumber(repo.stars)}</td>
+                          <td className="py-1.5 text-right text-green-600 font-medium">+{formatNumber(repo.starsGained)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
             </div>
