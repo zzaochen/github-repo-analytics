@@ -20,8 +20,11 @@ function getSupabase() {
 // Sleep helper
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Fetch stargazers using GraphQL
-async function fetchStargazersGraphQL(token, owner, repo, sinceDate = null) {
+// Fetch NEW stargazers using GraphQL (DESC order - newest first, stop when hitting old data)
+// This is O(new stars) instead of O(total stars)
+async function fetchNewStargazersGraphQL(token, owner, repo, sinceDate) {
+  if (!sinceDate) return [];
+
   const graphqlWithAuth = graphql.defaults({
     headers: { authorization: `token ${token}` }
   });
@@ -30,10 +33,11 @@ async function fetchStargazersGraphQL(token, owner, repo, sinceDate = null) {
   let cursor = null;
   let hasNextPage = true;
 
+  // Use DESC order (newest first) so we can stop early when hitting old stars
   const query = `
     query($owner: String!, $repo: String!, $first: Int!, $after: String) {
       repository(owner: $owner, name: $repo) {
-        stargazers(first: $first, after: $after, orderBy: {field: STARRED_AT, direction: ASC}) {
+        stargazers(first: $first, after: $after, orderBy: {field: STARRED_AT, direction: DESC}) {
           edges {
             starredAt
             node { login }
@@ -55,11 +59,20 @@ async function fetchStargazersGraphQL(token, owner, repo, sinceDate = null) {
       });
 
       const { edges, pageInfo } = result.repository.stargazers;
+      let foundOldStar = false;
 
       for (const edge of edges) {
-        // If we have a sinceDate, only include stars after that date
-        if (sinceDate && edge.starredAt < sinceDate) continue;
+        // Since we're going newest first, stop when we hit a star older than sinceDate
+        if (edge.starredAt <= sinceDate) {
+          foundOldStar = true;
+          break;
+        }
         stargazers.push({ starredAt: edge.starredAt });
+      }
+
+      // Stop if we found an old star (all remaining are older)
+      if (foundOldStar) {
+        break;
       }
 
       hasNextPage = pageInfo.hasNextPage;
@@ -84,8 +97,55 @@ async function fetchStargazersGraphQL(token, owner, repo, sinceDate = null) {
   return stargazers;
 }
 
+// Fetch forks since date (sorted by newest first for efficiency)
+async function fetchForksSince(octokit, owner, repo, sinceDate) {
+  if (!sinceDate) return [];
+
+  const forks = [];
+  let page = 1;
+  const sinceDateObj = new Date(sinceDate);
+
+  while (true) {
+    try {
+      const { data } = await octokit.repos.listForks({
+        owner, repo,
+        sort: 'newest',
+        per_page: 100,
+        page
+      });
+
+      if (data.length === 0) break;
+
+      let foundOldFork = false;
+      for (const fork of data) {
+        const forkDate = new Date(fork.created_at);
+        if (forkDate <= sinceDateObj) {
+          foundOldFork = true;
+          break;
+        }
+        forks.push({ forkedAt: fork.created_at });
+      }
+
+      // Stop if we found an old fork
+      if (foundOldFork) break;
+      if (data.length < 100) break;
+      page++;
+    } catch (error) {
+      if (error.status === 403 || error.status === 429) {
+        console.log('Rate limited on forks, stopping');
+        break;
+      }
+      throw error;
+    }
+  }
+
+  return forks;
+}
+
 // Fetch issues since date
 async function fetchIssuesSince(octokit, owner, repo, sinceDate) {
+  if (!sinceDate) return [];
+
   const issues = [];
   let page = 1;
 
@@ -124,8 +184,60 @@ async function fetchIssuesSince(octokit, owner, repo, sinceDate) {
   return issues;
 }
 
+// Fetch PRs since date (sorted by created, newest first)
+async function fetchPRsSince(octokit, owner, repo, sinceDate) {
+  if (!sinceDate) return [];
+
+  const prs = [];
+  let page = 1;
+  const sinceDateObj = new Date(sinceDate);
+
+  while (true) {
+    try {
+      const { data } = await octokit.pulls.list({
+        owner, repo,
+        state: 'all',
+        sort: 'created',
+        direction: 'desc',
+        per_page: 100,
+        page
+      });
+
+      if (data.length === 0) break;
+
+      let foundOldPR = false;
+      for (const pr of data) {
+        const prDate = new Date(pr.created_at);
+        if (prDate <= sinceDateObj) {
+          foundOldPR = true;
+          break;
+        }
+        prs.push({
+          createdAt: pr.created_at,
+          closedAt: pr.closed_at,
+          mergedAt: pr.merged_at
+        });
+      }
+
+      if (foundOldPR) break;
+      if (data.length < 100) break;
+      page++;
+    } catch (error) {
+      if (error.status === 403 || error.status === 429) {
+        console.log('Rate limited on PRs, stopping');
+        break;
+      }
+      throw error;
+    }
+  }
+
+  return prs;
+}
+
 // Fetch commits since date
 async function fetchCommitsSince(octokit, owner, repo, sinceDate) {
+  if (!sinceDate) return [];
+
   const commits = [];
   let page = 1;
 
@@ -161,6 +273,80 @@ async function fetchCommitsSince(octokit, owner, repo, sinceDate) {
   return commits;
 }
 
+// Aggregate new data into daily metrics
+function aggregateNewDataToDaily(newStars, newForks, newIssues, newPRs, newCommits, startDate) {
+  const dailyMap = new Map();
+
+  // Helper to get or create day entry
+  const getDay = (dateStr) => {
+    const date = dateStr.split('T')[0];
+    if (!dailyMap.has(date)) {
+      dailyMap.set(date, {
+        date,
+        newStars: 0,
+        newForks: 0,
+        issuesOpened: 0,
+        issuesClosed: 0,
+        prsOpened: 0,
+        prsClosed: 0,
+        prsMerged: 0,
+        commits: 0
+      });
+    }
+    return dailyMap.get(date);
+  };
+
+  // Aggregate stars
+  for (const star of newStars) {
+    const day = getDay(star.starredAt);
+    day.newStars++;
+  }
+
+  // Aggregate forks
+  for (const fork of newForks) {
+    const day = getDay(fork.forkedAt);
+    day.newForks++;
+  }
+
+  // Aggregate issues
+  for (const issue of newIssues) {
+    if (issue.createdAt && issue.createdAt > startDate) {
+      const day = getDay(issue.createdAt);
+      day.issuesOpened++;
+    }
+    if (issue.closedAt && issue.closedAt > startDate) {
+      const day = getDay(issue.closedAt);
+      day.issuesClosed++;
+    }
+  }
+
+  // Aggregate PRs
+  for (const pr of newPRs) {
+    if (pr.createdAt) {
+      const day = getDay(pr.createdAt);
+      day.prsOpened++;
+    }
+    if (pr.closedAt) {
+      const day = getDay(pr.closedAt);
+      day.prsClosed++;
+    }
+    if (pr.mergedAt) {
+      const day = getDay(pr.mergedAt);
+      day.prsMerged++;
+    }
+  }
+
+  // Aggregate commits
+  for (const commit of newCommits) {
+    if (commit.date) {
+      const day = getDay(commit.date);
+      day.commits++;
+    }
+  }
+
+  return Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 // Get cached repos
 async function getCachedRepos(supabase) {
   const { data, error } = await supabase
@@ -173,6 +359,71 @@ async function getCachedRepos(supabase) {
     return [];
   }
   return data || [];
+}
+
+// Get last metric for repo to get cumulative totals
+async function getLastMetric(supabase, repoId) {
+  const { data } = await supabase
+    .from('daily_metrics')
+    .select('*')
+    .eq('repo_id', repoId)
+    .order('date', { ascending: false })
+    .limit(1)
+    .single();
+
+  return data;
+}
+
+// Save new daily metrics incrementally
+async function saveNewDailyMetrics(supabase, repoId, newDailyData, lastMetric) {
+  if (newDailyData.length === 0) return;
+
+  // Start with last known totals
+  let runningTotals = {
+    stars: lastMetric?.total_stars || 0,
+    forks: lastMetric?.total_forks || 0,
+    issuesOpened: lastMetric?.total_issues_opened || 0,
+    issuesClosed: lastMetric?.total_issues_closed || 0,
+    prsOpened: lastMetric?.total_prs_opened || 0,
+    prsClosed: lastMetric?.total_prs_closed || 0,
+    prsMerged: lastMetric?.total_prs_merged || 0
+  };
+
+  const metricsToInsert = [];
+
+  for (const day of newDailyData) {
+    // Update running totals
+    runningTotals.stars += day.newStars;
+    runningTotals.forks += day.newForks;
+    runningTotals.issuesOpened += day.issuesOpened;
+    runningTotals.issuesClosed += day.issuesClosed;
+    runningTotals.prsOpened += day.prsOpened;
+    runningTotals.prsClosed += day.prsClosed;
+    runningTotals.prsMerged += day.prsMerged;
+
+    metricsToInsert.push({
+      repo_id: repoId,
+      date: day.date,
+      total_stars: runningTotals.stars,
+      total_forks: runningTotals.forks,
+      total_issues_opened: runningTotals.issuesOpened,
+      total_issues_closed: runningTotals.issuesClosed,
+      total_prs_opened: runningTotals.prsOpened,
+      total_prs_closed: runningTotals.prsClosed,
+      total_prs_merged: runningTotals.prsMerged,
+      commits: day.commits
+    });
+  }
+
+  // Upsert to handle any overlapping dates
+  const { error } = await supabase
+    .from('daily_metrics')
+    .upsert(metricsToInsert, { onConflict: 'repo_id,date' });
+
+  if (error) {
+    console.error('Error saving metrics:', error);
+    throw error;
+  }
 }
 
 // Update repo's last_fetched timestamp
@@ -239,15 +490,8 @@ export default async function handler(req, res) {
       const repoName = `${repo.owner}/${repo.repo}`;
 
       try {
-        // Get the last date we have data for
-        const { data: lastMetric } = await supabase
-          .from('daily_metrics')
-          .select('date')
-          .eq('repo_id', repo.id)
-          .order('date', { ascending: false })
-          .limit(1)
-          .single();
-
+        // Get the last metric to know where to resume from
+        const lastMetric = await getLastMetric(supabase, repo.id);
         const lastDate = lastMetric?.date;
 
         // Skip if already up to date
@@ -259,16 +503,29 @@ export default async function handler(req, res) {
 
         console.log(`Refreshing ${repoName} (last data: ${lastDate || 'none'})...`);
 
-        // Fetch new data since last date
-        const sinceDate = lastDate ? new Date(lastDate).toISOString() : null;
+        // Fetch new data since last date (efficient - only fetches new data)
+        const sinceDate = lastDate ? `${lastDate}T23:59:59Z` : null;
 
-        const [newStars, newIssues, newCommits] = await Promise.all([
-          sinceDate ? fetchStargazersGraphQL(githubToken, repo.owner, repo.repo, sinceDate) : [],
-          sinceDate ? fetchIssuesSince(octokit, repo.owner, repo.repo, sinceDate) : [],
-          sinceDate ? fetchCommitsSince(octokit, repo.owner, repo.repo, sinceDate) : []
+        const [newStars, newForks, newIssues, newPRs, newCommits] = await Promise.all([
+          fetchNewStargazersGraphQL(githubToken, repo.owner, repo.repo, sinceDate),
+          fetchForksSince(octokit, repo.owner, repo.repo, sinceDate),
+          fetchIssuesSince(octokit, repo.owner, repo.repo, sinceDate),
+          fetchPRsSince(octokit, repo.owner, repo.repo, sinceDate),
+          fetchCommitsSince(octokit, repo.owner, repo.repo, sinceDate)
         ]);
 
-        console.log(`  Found ${newStars.length} new stars, ${newIssues.length} new issues, ${newCommits.length} new commits`);
+        console.log(`  Found ${newStars.length} new stars, ${newForks.length} new forks, ${newIssues.length} issues, ${newPRs.length} PRs, ${newCommits.length} commits`);
+
+        // Aggregate into daily metrics
+        const newDailyData = aggregateNewDataToDaily(
+          newStars, newForks, newIssues, newPRs, newCommits, sinceDate
+        );
+
+        // Save to database
+        if (newDailyData.length > 0) {
+          await saveNewDailyMetrics(supabase, repo.id, newDailyData, lastMetric);
+          console.log(`  Saved ${newDailyData.length} new daily records`);
+        }
 
         // Update timestamp
         await updateRepoTimestamp(supabase, repo.owner, repo.repo);
