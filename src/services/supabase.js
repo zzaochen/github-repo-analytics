@@ -1253,8 +1253,8 @@ export async function backfillAllMilestones() {
               ? crossingMetric.total_stars
               : latestStars;
 
-            // Try to insert (will be ignored if already exists due to UNIQUE constraint)
-            const { data, error } = await supabase
+            // Upsert milestone (update if exists, insert if not)
+            const { error } = await supabase
               .from('milestone_events')
               .upsert({
                 repo_id: repo.id,
@@ -1262,10 +1262,9 @@ export async function backfillAllMilestones() {
                 milestone_value: milestone.value,
                 stars_at_crossing: starsAtCrossing,
                 crossed_at: crossedAt
-              }, { onConflict: 'repo_id,milestone_type', ignoreDuplicates: true })
-              .select();
+              }, { onConflict: 'repo_id,milestone_type' });
 
-            if (!error && data && data.length > 0) {
+            if (!error) {
               milestonesAdded++;
             }
           }

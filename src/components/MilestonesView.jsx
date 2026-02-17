@@ -47,7 +47,7 @@ export default function MilestonesView() {
     }
 
     // One-time recalculation of milestone dates from time series data
-    const recalcKey = 'milestones_dates_recalculated_v2';
+    const recalcKey = 'milestones_dates_recalculated_v3';
     if (autoBackfill && !localStorage.getItem(recalcKey)) {
       console.log('Running full milestone backfill and recalculation...');
       await backfillAllMilestones();
