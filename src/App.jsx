@@ -707,7 +707,12 @@ function App() {
               )}
             </div>
 
-            <TokenSettings setToken={setToken} />
+            <TokenSettings
+              user={user}
+              onSignIn={handleSignIn}
+              onSignOut={handleSignOut}
+              authLoading={authLoading}
+            />
             <RateLimitStatus token={token} />
           </div>
         </div>
