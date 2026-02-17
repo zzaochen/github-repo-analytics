@@ -44,7 +44,6 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [token, setToken] = useState('');
   const location = useLocation();
-  const [saveToken, setSaveToken] = useState(true);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [refreshProgress, setRefreshProgress] = useState('');
 
@@ -60,10 +59,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (saveToken && token) {
+    if (token) {
       localStorage.setItem(TOKEN_KEY, token);
     }
-  }, [token, saveToken]);
+  }, [token]);
 
   // Load from cache only (no fetching)
   const loadFromCache = async (owner, repo, token) => {
@@ -657,12 +656,7 @@ function App() {
               )}
             </div>
 
-            <TokenSettings
-              token={token}
-              setToken={setToken}
-              saveToken={saveToken}
-              setSaveToken={setSaveToken}
-            />
+            <TokenSettings setToken={setToken} />
             <RateLimitStatus token={token} />
           </div>
         </div>

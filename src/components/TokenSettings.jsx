@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { signInWithGitHub, signOut, getSession, onAuthStateChange } from '../services/supabase';
 
-export default function TokenSettings({ token, setToken, saveToken, setSaveToken }) {
+export default function TokenSettings({ setToken }) {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function TokenSettings({ token, setToken, saveToken, setSaveToken
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
-        // Don't clear token on sign out - user might have manual token
+        setToken('');
       }
     });
 
@@ -47,13 +47,11 @@ export default function TokenSettings({ token, setToken, saveToken, setSaveToken
     setLoading(true);
     await signOut();
     setUser(null);
+    setToken('');
+    localStorage.removeItem('github_analytics_token');
     setLoading(false);
   };
 
-  const handleClearToken = () => {
-    setToken('');
-    localStorage.removeItem('github_analytics_token');
-  };
 
   return (
     <div className="pt-4 border-t border-gray-200">
@@ -63,7 +61,7 @@ export default function TokenSettings({ token, setToken, saveToken, setSaveToken
       >
         <span className="text-sm text-gray-600">Settings</span>
         <div className="flex items-center gap-2">
-          {(token || user) && <span className="w-2 h-2 bg-green-500 rounded-full" title="Authenticated"></span>}
+          {user && <span className="w-2 h-2 bg-green-500 rounded-full" title="Authenticated"></span>}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -78,7 +76,7 @@ export default function TokenSettings({ token, setToken, saveToken, setSaveToken
       {isOpen && (
         <div className="mt-3 space-y-4">
           {/* GitHub OAuth Section */}
-          <div className="pb-3 border-b border-gray-100">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               GitHub Authentication
             </label>
@@ -121,44 +119,6 @@ export default function TokenSettings({ token, setToken, saveToken, setSaveToken
             </p>
           </div>
 
-          {/* Manual Token Section */}
-          <div>
-            <label htmlFor="token" className="block text-sm font-medium text-gray-700 mb-2">
-              Or use a Personal Access Token
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                id="token"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="ghp_xxxxxxxxxxxx"
-                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-              {token && (
-                <button
-                  type="button"
-                  onClick={handleClearToken}
-                  className="px-2 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors"
-                  title="Clear saved token"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <input
-                type="checkbox"
-                id="saveToken"
-                checked={saveToken}
-                onChange={(e) => setSaveToken(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <label htmlFor="saveToken" className="text-xs text-gray-600">
-                Remember token in browser
-              </label>
-            </div>
-          </div>
         </div>
       )}
     </div>
