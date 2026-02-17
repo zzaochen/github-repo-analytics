@@ -47,13 +47,16 @@ export default function MilestonesView() {
     }
 
     // One-time recalculation of milestone dates from time series data
-    const recalcKey = 'milestones_dates_recalculated_v1';
-    if (autoBackfill && data && data.length > 0 && !localStorage.getItem(recalcKey)) {
-      console.log('Recalculating milestone dates from time series data...');
+    const recalcKey = 'milestones_dates_recalculated_v2';
+    if (autoBackfill && !localStorage.getItem(recalcKey)) {
+      console.log('Running full milestone backfill and recalculation...');
+      await backfillAllMilestones();
       await recalculateMilestoneDates();
       localStorage.setItem(recalcKey, 'true');
       data = await getMilestoneEvents(1000);
     }
+
+    console.log(`Loaded ${data?.length || 0} milestone events`);
 
     // Fetch current star counts for all repos
     const starsMap = await getCurrentStarsForAllRepos();
