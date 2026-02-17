@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMilestoneEvents, backfillAllMilestones, recalculateMilestoneDates, getCurrentStarsForAllRepos, STAR_MILESTONES } from '../services/supabase';
+import { getMilestoneEvents, backfillAllMilestones, getCurrentStarsForAllRepos, STAR_MILESTONES } from '../services/supabase';
 
 const DATE_FILTERS = [
   { key: 'all', label: 'All Time' },
@@ -35,34 +35,27 @@ export default function MilestonesView() {
     loadMilestones(true); // true = auto-backfill if empty
   }, []);
 
-  const loadMilestones = async (autoBackfill = false) => {
+  const loadMilestones = async (runBackfill = false) => {
     setLoading(true);
-    let data = await getMilestoneEvents(1000); // Increased limit to fetch all milestones
 
-    // Auto-backfill if no milestones exist
-    if (autoBackfill && (!data || data.length === 0)) {
-      console.log('No milestones found, running backfill...');
-      await backfillAllMilestones();
-      data = await getMilestoneEvents(1000);
+    // One-time backfill to populate milestones from time series data
+    const backfillKey = 'milestones_backfill_v3';
+    if (runBackfill && !localStorage.getItem(backfillKey)) {
+      console.log('Running milestone backfill...');
+      const result = await backfillAllMilestones();
+      console.log(`Backfill complete: ${result.processed} repos, ${result.milestonesAdded} milestones`);
+      localStorage.setItem(backfillKey, 'true');
     }
 
-    // One-time recalculation of milestone dates from time series data
-    const recalcKey = 'milestones_dates_recalculated_v3';
-    if (autoBackfill && !localStorage.getItem(recalcKey)) {
-      console.log('Running full milestone backfill and recalculation...');
-      await backfillAllMilestones();
-      await recalculateMilestoneDates();
-      localStorage.setItem(recalcKey, 'true');
-      data = await getMilestoneEvents(1000);
-    }
+    // Fetch milestones and current stars in parallel
+    const [milestoneData, starsMap] = await Promise.all([
+      getMilestoneEvents(1000),
+      getCurrentStarsForAllRepos()
+    ]);
 
-    console.log(`Loaded ${data?.length || 0} milestone events`);
-
-    // Fetch current star counts for all repos
-    const starsMap = await getCurrentStarsForAllRepos();
+    console.log(`Loaded ${milestoneData?.length || 0} milestone events`);
     setCurrentStarsMap(starsMap);
-
-    setMilestones(data);
+    setMilestones(milestoneData || []);
     setLoading(false);
   };
 
