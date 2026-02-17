@@ -33,7 +33,7 @@ function setCache(data) {
   } catch {}
 }
 
-export default function HomePage({ onRepoSelect }) {
+export default function HomePage({ onRepoSelect, onOpenSidebar }) {
   const navigate = useNavigate();
   const [trendingData, setTrendingData] = useState({
     daily: { repos: [], loading: true, error: null },
@@ -171,7 +171,16 @@ export default function HomePage({ onRepoSelect }) {
       {/* Repo Search */}
       {cachedRepos.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-12 shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">Repo Search</h2>
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">Repo Search</h2>
+          <p className="text-gray-500 text-sm text-center mb-4">
+            Look up a specific repo or if not cached, run a{' '}
+            <button
+              onClick={onOpenSidebar}
+              className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+            >
+              fetch
+            </button>
+          </p>
           <div className="relative" ref={dropdownRef}>
             <input
               type="text"

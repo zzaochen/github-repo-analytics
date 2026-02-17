@@ -728,7 +728,7 @@ function App() {
         <div className={`${sidebarOpen ? 'max-w-7xl' : 'max-w-[1600px]'} mx-auto px-8 py-8`}>
           <Routes>
             {/* Home - Trending Overview */}
-            <Route path="/" element={<HomePage onRepoSelect={handleCachedRepoSelect} />} />
+            <Route path="/" element={<HomePage onRepoSelect={handleCachedRepoSelect} onOpenSidebar={() => setSidebarOpen(true)} />} />
 
             {/* Repo Lookup View */}
             <Route path="/lookup" element={
