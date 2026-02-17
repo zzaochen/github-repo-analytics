@@ -777,7 +777,7 @@ function App() {
 
               {/* Auth Button */}
               {user ? (
-                <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
+                <div className="flex items-center gap-2 ml-2 pl-4 border-l border-gray-200">
                   {user.user_metadata?.avatar_url && (
                     <img
                       src={user.user_metadata.avatar_url}
@@ -797,7 +797,7 @@ function App() {
                 <button
                   onClick={handleSignIn}
                   disabled={authLoading}
-                  className="ml-4 pl-4 border-l border-gray-200 flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
+                  className="ml-2 pl-4 border-l border-gray-200 flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
