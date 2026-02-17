@@ -255,9 +255,9 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
           </button>
           <button
             onClick={() => setSortBy('percentChange')}
-            className={`px-3 py-1 border-t border-r border-b -ml-px transition-colors ${
+            className={`px-3 py-1 border-t border-r border-b border-l border-l-gray-200 -ml-px transition-colors ${
               sortBy === 'percentChange'
-                ? 'bg-blue-500 text-white border-blue-500'
+                ? 'bg-blue-500 text-white border-blue-500 border-l-gray-200'
                 : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
             }`}
           >
@@ -265,9 +265,9 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
           </button>
           <button
             onClick={() => setSortBy('stars')}
-            className={`px-3 py-1 rounded-r-lg border-t border-r border-b -ml-px transition-colors ${
+            className={`px-3 py-1 rounded-r-lg border-t border-r border-b border-l border-l-gray-200 -ml-px transition-colors ${
               sortBy === 'stars'
-                ? 'bg-blue-500 text-white border-blue-500'
+                ? 'bg-blue-500 text-white border-blue-500 border-l-gray-200'
                 : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
             }`}
           >
