@@ -266,7 +266,9 @@ export async function getAggregateStats() {
     if (reposError || !repos || repos.length === 0) {
       return {
         totalRepos: 0,
-        totalCommits: 0,
+        totalStars: 0,
+        totalForks: 0,
+        totalContributors: 0,
         totalPRsOpened: 0,
         totalPRsMerged: 0,
         totalPRsClosed: 0,
@@ -280,7 +282,7 @@ export async function getAggregateStats() {
     const latestMetricsPromises = repoIds.map(repoId =>
       supabase
         .from('daily_metrics')
-        .select('total_commits, total_prs_opened, total_prs_merged, total_prs_closed')
+        .select('total_stars, total_forks, total_contributors, total_prs_opened, total_prs_merged, total_prs_closed')
         .eq('repo_id', repoId)
         .order('date', { ascending: false })
         .limit(1)
@@ -290,14 +292,18 @@ export async function getAggregateStats() {
     const results = await Promise.all(latestMetricsPromises);
 
     // Sum up all the metrics
-    let totalCommits = 0;
+    let totalStars = 0;
+    let totalForks = 0;
+    let totalContributors = 0;
     let totalPRsOpened = 0;
     let totalPRsMerged = 0;
     let totalPRsClosed = 0;
 
     for (const result of results) {
       if (result.data) {
-        totalCommits += result.data.total_commits || 0;
+        totalStars += result.data.total_stars || 0;
+        totalForks += result.data.total_forks || 0;
+        totalContributors += result.data.total_contributors || 0;
         totalPRsOpened += result.data.total_prs_opened || 0;
         totalPRsMerged += result.data.total_prs_merged || 0;
         totalPRsClosed += result.data.total_prs_closed || 0;
@@ -306,7 +312,9 @@ export async function getAggregateStats() {
 
     return {
       totalRepos: repos.length,
-      totalCommits,
+      totalStars,
+      totalForks,
+      totalContributors,
       totalPRsOpened,
       totalPRsMerged,
       totalPRsClosed,

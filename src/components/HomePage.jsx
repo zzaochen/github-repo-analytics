@@ -500,8 +500,16 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                       <span className="text-base font-bold text-gray-900">{aggregateStats.totalRepos.toLocaleString('en-US')}</span>
                     </div>
                     <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
-                      <span className="text-sm text-gray-600">Total Commits (All Repos)</span>
-                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalCommits.toLocaleString('en-US')}</span>
+                      <span className="text-sm text-gray-600">Total Stars (All Repos)</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalStars.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Total Forks (All Repos)</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalForks.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Total Contributors (All Repos)</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalContributors.toLocaleString('en-US')}</span>
                     </div>
                     <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
                       <span className="text-sm text-gray-600">Total PRs Opened (All Repos)</span>
