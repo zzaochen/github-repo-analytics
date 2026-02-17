@@ -221,6 +221,31 @@ export async function saveRepoToCache(owner, repo, dailyMetrics, incrementalUpda
     const monthlyMetrics = calculateMonthlyMetrics(dailyMetrics);
     await saveMonthlyMetrics(repoData.id, monthlyMetrics);
 
+    // Check for milestone crossings
+    if (dailyMetrics.length > 0) {
+      const latestStars = dailyMetrics[dailyMetrics.length - 1].totalStars || 0;
+
+      if (!incrementalUpdate) {
+        // New repo or full refresh - backfill all milestones already passed
+        await backfillMilestonesForRepo(repoData.id, owner, repo, latestStars);
+      } else {
+        // Incremental update - check for newly crossed milestones
+        // Get the previous star count from the metrics we just saved (second to last)
+        const { data: prevMetrics } = await supabase
+          .from('daily_metrics')
+          .select('total_stars')
+          .eq('repo_id', repoData.id)
+          .order('date', { ascending: false })
+          .limit(2);
+
+        const previousStars = prevMetrics && prevMetrics.length > 1
+          ? prevMetrics[1].total_stars || 0
+          : 0;
+
+        await checkAndRecordMilestones(repoData.id, owner, repo, previousStars, latestStars);
+      }
+    }
+
     return repoData;
   } catch (error) {
     console.error('Error saving to cache:', error);
@@ -970,3 +995,137 @@ export async function getLastCronRun(period = 'weekly') {
     return null;
   }
 }
+
+// Milestone thresholds
+const STAR_MILESTONES = [
+  { type: 'stars_5k', value: 5000, label: '5K Stars' },
+  { type: 'stars_10k', value: 10000, label: '10K Stars' },
+  { type: 'stars_25k', value: 25000, label: '25K Stars' },
+  { type: 'stars_50k', value: 50000, label: '50K Stars' },
+  { type: 'stars_100k', value: 100000, label: '100K Stars' }
+];
+
+// Check and record milestone crossings for a repo
+export async function checkAndRecordMilestones(repoId, owner, repo, previousStars, newStars) {
+  if (!supabase || previousStars === null || newStars === null) return [];
+
+  const crossedMilestones = [];
+
+  try {
+    for (const milestone of STAR_MILESTONES) {
+      // Check if we crossed this milestone (was below, now at or above)
+      if (previousStars < milestone.value && newStars >= milestone.value) {
+        // Try to insert the milestone event (will fail silently if already exists due to UNIQUE constraint)
+        const { data, error } = await supabase
+          .from('milestone_events')
+          .upsert({
+            repo_id: repoId,
+            milestone_type: milestone.type,
+            milestone_value: milestone.value,
+            stars_at_crossing: newStars,
+            crossed_at: new Date().toISOString()
+          }, { onConflict: 'repo_id,milestone_type', ignoreDuplicates: true })
+          .select();
+
+        if (!error && data && data.length > 0) {
+          crossedMilestones.push({
+            ...milestone,
+            owner,
+            repo,
+            starsAtCrossing: newStars
+          });
+          console.log(`🎉 ${owner}/${repo} crossed ${milestone.label}!`);
+        }
+      }
+    }
+
+    return crossedMilestones;
+  } catch (error) {
+    console.error('Error checking milestones:', error);
+    return [];
+  }
+}
+
+// Backfill milestones for existing repos (for repos that already passed milestones)
+export async function backfillMilestonesForRepo(repoId, owner, repo, currentStars) {
+  if (!supabase) return;
+
+  try {
+    for (const milestone of STAR_MILESTONES) {
+      if (currentStars >= milestone.value) {
+        // Insert milestone if it doesn't exist
+        await supabase
+          .from('milestone_events')
+          .upsert({
+            repo_id: repoId,
+            milestone_type: milestone.type,
+            milestone_value: milestone.value,
+            stars_at_crossing: currentStars,
+            crossed_at: new Date().toISOString()
+          }, { onConflict: 'repo_id,milestone_type', ignoreDuplicates: true });
+      }
+    }
+  } catch (error) {
+    console.error('Error backfilling milestones:', error);
+  }
+}
+
+// Get all milestone events
+export async function getMilestoneEvents(limit = 50) {
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('milestone_events')
+      .select(`
+        *,
+        repositories (owner, repo)
+      `)
+      .order('crossed_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching milestone events:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching milestone events:', error);
+    return [];
+  }
+}
+
+// Get milestones for a specific repo
+export async function getMilestonesForRepo(owner, repo) {
+  if (!supabase) return [];
+
+  try {
+    const { data: repoData } = await supabase
+      .from('repositories')
+      .select('id')
+      .eq('owner', owner)
+      .eq('repo', repo)
+      .single();
+
+    if (!repoData) return [];
+
+    const { data, error } = await supabase
+      .from('milestone_events')
+      .select('*')
+      .eq('repo_id', repoData.id)
+      .order('milestone_value', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching repo milestones:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching repo milestones:', error);
+    return [];
+  }
+}
+
+export { STAR_MILESTONES };

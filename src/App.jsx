@@ -6,6 +6,7 @@ import CachedRepos from './components/CachedRepos';
 import TokenSettings from './components/TokenSettings';
 import CompareView from './components/CompareView';
 import TrendingView from './components/TrendingView';
+import MilestonesView from './components/MilestonesView';
 import HomePage from './components/HomePage';
 import BatchFetch from './components/BatchFetch';
 import RateLimitStatus from './components/RateLimitStatus';
@@ -774,6 +775,16 @@ function App() {
               >
                 GitHub Trending
               </Link>
+              <Link
+                to="/milestones"
+                className={`text-sm font-medium transition-colors ${
+                  location.pathname === '/milestones'
+                    ? 'text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Milestones
+              </Link>
 
               {/* Auth Button */}
               {user ? (
@@ -860,6 +871,9 @@ function App() {
 
             {/* Trending View */}
             <Route path="/trending" element={<TrendingView token={token} />} />
+
+            {/* Milestones View */}
+            <Route path="/milestones" element={<MilestonesView />} />
           </Routes>
         </div>
       </div>
