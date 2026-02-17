@@ -64,9 +64,37 @@ export default function MilestonesView() {
     }
   };
 
-  const filteredMilestones = filter === 'all'
-    ? milestones
-    : milestones.filter(m => m.milestone_type === filter);
+  // Group milestones by repo - each repo appears once with checkmarks for milestones hit
+  const repoMilestones = milestones.reduce((acc, milestone) => {
+    const repoKey = `${milestone.repositories?.owner}/${milestone.repositories?.repo}`;
+    if (!acc[repoKey]) {
+      acc[repoKey] = {
+        owner: milestone.repositories?.owner,
+        repo: milestone.repositories?.repo,
+        fullName: repoKey,
+        milestones: {},
+        latestStars: 0,
+        latestDate: null
+      };
+    }
+    acc[repoKey].milestones[milestone.milestone_type] = true;
+    // Track highest star count and latest date
+    if (milestone.stars_at_crossing > acc[repoKey].latestStars) {
+      acc[repoKey].latestStars = milestone.stars_at_crossing;
+    }
+    if (!acc[repoKey].latestDate || new Date(milestone.crossed_at) > new Date(acc[repoKey].latestDate)) {
+      acc[repoKey].latestDate = milestone.crossed_at;
+    }
+    return acc;
+  }, {});
+
+  // Convert to array and sort by stars
+  const repoList = Object.values(repoMilestones).sort((a, b) => b.latestStars - a.latestStars);
+
+  // Filter repos based on selected milestone filter
+  const filteredRepos = filter === 'all'
+    ? repoList
+    : repoList.filter(repo => repo.milestones[filter]);
 
   return (
     <div>
@@ -96,7 +124,7 @@ export default function MilestonesView() {
       {/* Stats summary */}
       <div className="grid grid-cols-5 gap-4 mb-6">
         {STAR_MILESTONES.map(milestone => {
-          const count = milestones.filter(m => m.milestone_type === milestone.type).length;
+          const count = repoList.filter(repo => repo.milestones[milestone.type]).length;
           return (
             <div
               key={milestone.type}
@@ -147,7 +175,7 @@ export default function MilestonesView() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             </div>
-          ) : filteredMilestones.length === 0 ? (
+          ) : filteredRepos.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <div className="text-4xl mb-4">🎯</div>
               <p className="text-lg">No milestones recorded yet</p>
@@ -161,40 +189,40 @@ export default function MilestonesView() {
                 <tr className="text-left text-gray-500 text-xs">
                   <th className="pb-2 font-medium w-8">#</th>
                   <th className="pb-2 font-medium">Repository</th>
-                  <th className="pb-2 font-medium w-24">Milestone</th>
                   <th className="pb-2 font-medium text-right w-20">Stars</th>
-                  <th className="pb-2 font-medium text-right w-28">Date</th>
+                  {STAR_MILESTONES.map(milestone => (
+                    <th key={milestone.type} className="pb-2 font-medium text-center w-12">
+                      {milestone.label.replace(' Stars', '')}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredMilestones.map((event, index) => (
-                  <tr key={event.id} className="border-t border-gray-100">
+                {filteredRepos.map((repo, index) => (
+                  <tr key={repo.fullName} className="border-t border-gray-100">
                     <td className="py-1.5 text-gray-400">{index + 1}</td>
                     <td className="py-1.5">
                       <a
-                        href={`https://github.com/${event.repositories?.owner}/${event.repositories?.repo}`}
+                        href={`https://github.com/${repo.fullName}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
                       >
-                        {event.repositories?.owner}/{event.repositories?.repo}
+                        {repo.fullName}
                       </a>
                     </td>
-                    <td className="py-1.5">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getMilestoneColor(event.milestone_type)}`}>
-                        {getMilestoneIcon(event.milestone_type)} {getMilestoneLabel(event.milestone_type)}
-                      </span>
-                    </td>
                     <td className="py-1.5 text-right text-gray-600">
-                      {event.stars_at_crossing.toLocaleString()}
+                      {repo.latestStars.toLocaleString()}
                     </td>
-                    <td className="py-1.5 text-right text-gray-500">
-                      {new Date(event.crossed_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </td>
+                    {STAR_MILESTONES.map(milestone => (
+                      <td key={milestone.type} className="py-1.5 text-center">
+                        {repo.milestones[milestone.type] ? (
+                          <span className="text-green-600">✓</span>
+                        ) : (
+                          <span className="text-gray-300">-</span>
+                        )}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
