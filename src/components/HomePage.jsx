@@ -301,6 +301,7 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                         <th className="pb-2 font-medium">Repository</th>
                         <th className="pb-2 font-medium text-right">Stars</th>
                         <th className="pb-2 font-medium text-right">New</th>
+                        <th className="pb-2 font-medium text-right">%</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -320,6 +321,11 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                           </td>
                           <td className="py-1.5 text-right text-gray-600">{formatNumber(repo.stars)}</td>
                           <td className="py-1.5 text-right text-green-600 font-medium">+{formatNumber(repo.starsGained)}</td>
+                          <td className="py-1.5 text-right text-green-600 font-medium">
+                            {repo.stars > repo.starsGained
+                              ? `+${((repo.starsGained / (repo.stars - repo.starsGained)) * 100).toFixed(1)}%`
+                              : 'New'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
