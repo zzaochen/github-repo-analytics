@@ -1,9 +1,16 @@
 // Incremental aggregation: adds new data to existing metrics
 // Used for "Update to Today" operations
 export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargazers, forks, issues, prs, commits) {
-  // Get last known cumulative totals from existing data
-  const lastMetric = existingMetrics && existingMetrics.length > 0
-    ? existingMetrics[existingMetrics.length - 1]
+  // First calculate existingBefore so we can get the correct lastMetric
+  const sinceDateStr = sinceDate.split('T')[0];
+  const existingBefore = existingMetrics
+    ? existingMetrics.filter(m => m.date < sinceDateStr)
+    : [];
+
+  // Get last known cumulative totals from data BEFORE sinceDate (not the lastDate itself)
+  // This ensures continuity when we merge existingBefore with newMetrics
+  const lastMetric = existingBefore.length > 0
+    ? existingBefore[existingBefore.length - 1]
     : null;
 
   let totalStars = lastMetric?.totalStars || 0;
@@ -132,11 +139,6 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
   });
 
   // Merge: keep existing data before sinceDate, replace/add new data
-  const sinceDateStr = sinceDate.split('T')[0];
-  const existingBefore = existingMetrics
-    ? existingMetrics.filter(m => m.date < sinceDateStr)
-    : [];
-
   return [...existingBefore, ...newMetrics];
 }
 
