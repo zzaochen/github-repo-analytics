@@ -1047,12 +1047,43 @@ export async function checkAndRecordMilestones(repoId, owner, repo, previousStar
 }
 
 // Backfill milestones for existing repos (for repos that already passed milestones)
+// Uses historical time series data to find the actual date each milestone was crossed
 export async function backfillMilestonesForRepo(repoId, owner, repo, currentStars) {
   if (!supabase) return;
 
   try {
+    // Fetch all daily metrics for this repo to find when milestones were crossed
+    let allMetrics = [];
+    let from = 0;
+    const batchSize = 1000;
+
+    while (true) {
+      const { data: batch, error: batchError } = await supabase
+        .from('daily_metrics')
+        .select('date, total_stars')
+        .eq('repo_id', repoId)
+        .order('date', { ascending: true })
+        .range(from, from + batchSize - 1);
+
+      if (batchError || !batch || batch.length === 0) break;
+      allMetrics = allMetrics.concat(batch);
+      if (batch.length < batchSize) break;
+      from += batchSize;
+    }
+
     for (const milestone of STAR_MILESTONES) {
       if (currentStars >= milestone.value) {
+        // Find the first date when stars crossed this milestone
+        const crossingMetric = allMetrics.find(m => m.total_stars >= milestone.value);
+
+        const crossedAt = crossingMetric
+          ? new Date(crossingMetric.date).toISOString()
+          : new Date().toISOString(); // Fallback to now if no historical data
+
+        const starsAtCrossing = crossingMetric
+          ? crossingMetric.total_stars
+          : currentStars;
+
         // Insert milestone if it doesn't exist
         await supabase
           .from('milestone_events')
@@ -1060,8 +1091,8 @@ export async function backfillMilestonesForRepo(repoId, owner, repo, currentStar
             repo_id: repoId,
             milestone_type: milestone.type,
             milestone_value: milestone.value,
-            stars_at_crossing: currentStars,
-            crossed_at: new Date().toISOString()
+            stars_at_crossing: starsAtCrossing,
+            crossed_at: crossedAt
           }, { onConflict: 'repo_id,milestone_type', ignoreDuplicates: true });
       }
     }
@@ -1129,11 +1160,12 @@ export async function getMilestonesForRepo(owner, repo) {
 }
 
 // Backfill milestones for ALL existing cached repos
+// Uses historical time series data to find the actual date each milestone was crossed
 export async function backfillAllMilestones() {
   if (!supabase) return { success: false, message: 'Supabase not initialized' };
 
   try {
-    // Get all repositories with their latest star counts
+    // Get all repositories
     const { data: repos, error: reposError } = await supabase
       .from('repositories')
       .select('id, owner, repo');
@@ -1146,19 +1178,44 @@ export async function backfillAllMilestones() {
     let milestonesAdded = 0;
 
     for (const repo of repos) {
-      // Get the latest star count for this repo
-      const { data: latestMetric } = await supabase
-        .from('daily_metrics')
-        .select('total_stars')
-        .eq('repo_id', repo.id)
-        .order('date', { ascending: false })
-        .limit(1)
-        .single();
+      // Fetch all daily metrics for this repo to find when milestones were crossed
+      let allMetrics = [];
+      let from = 0;
+      const batchSize = 1000;
 
-      if (latestMetric && latestMetric.total_stars > 0) {
+      while (true) {
+        const { data: batch, error: batchError } = await supabase
+          .from('daily_metrics')
+          .select('date, total_stars')
+          .eq('repo_id', repo.id)
+          .order('date', { ascending: true })
+          .range(from, from + batchSize - 1);
+
+        if (batchError || !batch || batch.length === 0) break;
+        allMetrics = allMetrics.concat(batch);
+        if (batch.length < batchSize) break;
+        from += batchSize;
+      }
+
+      if (allMetrics.length === 0) continue;
+
+      const latestStars = allMetrics[allMetrics.length - 1].total_stars || 0;
+
+      if (latestStars > 0) {
         // Check each milestone
         for (const milestone of STAR_MILESTONES) {
-          if (latestMetric.total_stars >= milestone.value) {
+          if (latestStars >= milestone.value) {
+            // Find the first date when stars crossed this milestone
+            const crossingMetric = allMetrics.find(m => m.total_stars >= milestone.value);
+
+            const crossedAt = crossingMetric
+              ? new Date(crossingMetric.date).toISOString()
+              : new Date().toISOString();
+
+            const starsAtCrossing = crossingMetric
+              ? crossingMetric.total_stars
+              : latestStars;
+
             // Try to insert (will be ignored if already exists due to UNIQUE constraint)
             const { data, error } = await supabase
               .from('milestone_events')
@@ -1166,8 +1223,8 @@ export async function backfillAllMilestones() {
                 repo_id: repo.id,
                 milestone_type: milestone.type,
                 milestone_value: milestone.value,
-                stars_at_crossing: latestMetric.total_stars,
-                crossed_at: new Date().toISOString()
+                stars_at_crossing: starsAtCrossing,
+                crossed_at: crossedAt
               }, { onConflict: 'repo_id,milestone_type', ignoreDuplicates: true })
               .select();
 
@@ -1184,6 +1241,87 @@ export async function backfillAllMilestones() {
     return { success: true, processed, milestonesAdded };
   } catch (error) {
     console.error('Error backfilling milestones:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+// Recalculate milestone dates from time series data (updates existing records)
+export async function recalculateMilestoneDates() {
+  if (!supabase) return { success: false, message: 'Supabase not initialized' };
+
+  try {
+    // Get all milestone events with repo info
+    const { data: milestones, error: milestonesError } = await supabase
+      .from('milestone_events')
+      .select(`
+        id,
+        repo_id,
+        milestone_type,
+        milestone_value,
+        repositories (owner, repo)
+      `);
+
+    if (milestonesError || !milestones) {
+      return { success: false, message: milestonesError?.message || 'No milestones found' };
+    }
+
+    let updated = 0;
+
+    // Group milestones by repo_id to avoid fetching metrics multiple times
+    const milestonesByRepo = milestones.reduce((acc, m) => {
+      if (!acc[m.repo_id]) acc[m.repo_id] = [];
+      acc[m.repo_id].push(m);
+      return acc;
+    }, {});
+
+    for (const [repoId, repoMilestones] of Object.entries(milestonesByRepo)) {
+      // Fetch all daily metrics for this repo
+      let allMetrics = [];
+      let from = 0;
+      const batchSize = 1000;
+
+      while (true) {
+        const { data: batch, error: batchError } = await supabase
+          .from('daily_metrics')
+          .select('date, total_stars')
+          .eq('repo_id', repoId)
+          .order('date', { ascending: true })
+          .range(from, from + batchSize - 1);
+
+        if (batchError || !batch || batch.length === 0) break;
+        allMetrics = allMetrics.concat(batch);
+        if (batch.length < batchSize) break;
+        from += batchSize;
+      }
+
+      if (allMetrics.length === 0) continue;
+
+      // Update each milestone for this repo
+      for (const milestone of repoMilestones) {
+        // Find the first date when stars crossed this milestone
+        const crossingMetric = allMetrics.find(m => m.total_stars >= milestone.milestone_value);
+
+        if (crossingMetric) {
+          const { error } = await supabase
+            .from('milestone_events')
+            .update({
+              crossed_at: new Date(crossingMetric.date).toISOString(),
+              stars_at_crossing: crossingMetric.total_stars
+            })
+            .eq('id', milestone.id);
+
+          if (!error) {
+            updated++;
+            console.log(`Updated ${milestone.repositories?.owner}/${milestone.repositories?.repo} ${milestone.milestone_type}: ${crossingMetric.date}`);
+          }
+        }
+      }
+    }
+
+    console.log(`Recalculated milestone dates: ${updated} milestones updated`);
+    return { success: true, updated };
+  } catch (error) {
+    console.error('Error recalculating milestone dates:', error);
     return { success: false, message: error.message };
   }
 }

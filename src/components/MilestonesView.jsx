@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMilestoneEvents, backfillAllMilestones, STAR_MILESTONES } from '../services/supabase';
+import { getMilestoneEvents, backfillAllMilestones, recalculateMilestoneDates, STAR_MILESTONES } from '../services/supabase';
 
 const DATE_FILTERS = [
   { key: 'all', label: 'All Time' },
@@ -40,6 +40,15 @@ export default function MilestonesView() {
     if (autoBackfill && (!data || data.length === 0)) {
       console.log('No milestones found, running backfill...');
       await backfillAllMilestones();
+      data = await getMilestoneEvents(100);
+    }
+
+    // One-time recalculation of milestone dates from time series data
+    const recalcKey = 'milestones_dates_recalculated_v1';
+    if (autoBackfill && data && data.length > 0 && !localStorage.getItem(recalcKey)) {
+      console.log('Recalculating milestone dates from time series data...');
+      await recalculateMilestoneDates();
+      localStorage.setItem(recalcKey, 'true');
       data = await getMilestoneEvents(100);
     }
 
