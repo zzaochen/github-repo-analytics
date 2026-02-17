@@ -157,6 +157,11 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
   const getSortedRepos = (repos) => {
     return [...repos].sort((a, b) => {
       if (sortBy === 'starsGained') return b.starsGained - a.starsGained;
+      if (sortBy === 'percentChange') {
+        const pctA = a.stars > a.starsGained ? (a.starsGained / (a.stars - a.starsGained)) * 100 : Infinity;
+        const pctB = b.stars > b.starsGained ? (b.starsGained / (b.stars - b.starsGained)) * 100 : Infinity;
+        return pctB - pctA;
+      }
       return b.stars - a.stars;
     });
   };
@@ -247,6 +252,16 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
             }`}
           >
             Stars Added
+          </button>
+          <button
+            onClick={() => setSortBy('percentChange')}
+            className={`px-3 py-1 border-t border-r border-b -ml-px transition-colors ${
+              sortBy === 'percentChange'
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            % Change
           </button>
           <button
             onClick={() => setSortBy('stars')}
