@@ -241,8 +241,8 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500">Sort by:</span>
+        <div className="flex items-center text-sm">
+          <span className="text-gray-500 mr-2">Sort by:</span>
           <button
             onClick={() => setSortBy('starsGained')}
             className={`px-3 py-1 rounded-l-lg border transition-colors ${
@@ -312,11 +312,11 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-gray-500 text-xs">
-                        <th className="pb-2 font-medium">#</th>
+                        <th className="pb-2 font-medium w-6">#</th>
                         <th className="pb-2 font-medium">Repository</th>
-                        <th className="pb-2 font-medium text-right">Stars</th>
-                        <th className="pb-2 font-medium text-right">New</th>
-                        <th className="pb-2 font-medium text-right">%</th>
+                        <th className="pb-2 font-medium text-right w-14">Stars</th>
+                        <th className="pb-2 font-medium text-right w-14">New</th>
+                        <th className="pb-2 font-medium text-right w-14">%</th>
                       </tr>
                     </thead>
                     <tbody>
