@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMilestoneEvents, backfillAllMilestones, recalculateMilestoneDates, STAR_MILESTONES } from '../services/supabase';
+import { getMilestoneEvents, backfillAllMilestones, recalculateMilestoneDates, getCurrentStarsForAllRepos, STAR_MILESTONES } from '../services/supabase';
 
 const DATE_FILTERS = [
   { key: 'all', label: 'All Time' },
@@ -15,6 +15,7 @@ export default function MilestonesView() {
   const [dateFilter, setDateFilter] = useState('all'); // 'all', 'week', 'month', '3months'
   const [selectedMilestone, setSelectedMilestone] = useState('stars_100k'); // For right panel dropdown
   const [sortConfig, setSortConfig] = useState({ column: 'date', direction: 'desc' }); // For right panel sorting
+  const [currentStarsMap, setCurrentStarsMap] = useState({}); // Map of repo -> current stars
 
   // Filter milestones by date
   const getDateFilteredMilestones = (data) => {
@@ -53,6 +54,10 @@ export default function MilestonesView() {
       localStorage.setItem(recalcKey, 'true');
       data = await getMilestoneEvents(1000);
     }
+
+    // Fetch current star counts for all repos
+    const starsMap = await getCurrentStarsForAllRepos();
+    setCurrentStarsMap(starsMap);
 
     setMilestones(data);
     setLoading(false);
@@ -308,10 +313,10 @@ export default function MilestonesView() {
             {/* Table */}
             <div className="p-4">
               {(() => {
-                // Helper to get current stars for a repo from repoMilestones
+                // Helper to get current stars for a repo from currentStarsMap
                 const getCurrentStars = (event) => {
                   const repoKey = `${event.repositories?.owner}/${event.repositories?.repo}`;
-                  return repoMilestones[repoKey]?.latestStars || event.stars_at_crossing || 0;
+                  return currentStarsMap[repoKey] || event.stars_at_crossing || 0;
                 };
 
                 const milestonesForType = filteredByDateMilestones

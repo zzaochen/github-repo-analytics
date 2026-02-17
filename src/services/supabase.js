@@ -1127,6 +1127,43 @@ export async function getMilestoneEvents(limit = 50) {
   }
 }
 
+// Get current star counts for all repos (from latest daily_metrics)
+export async function getCurrentStarsForAllRepos() {
+  if (!supabase) return {};
+
+  try {
+    // Get all repositories
+    const { data: repos, error: reposError } = await supabase
+      .from('repositories')
+      .select('id, owner, repo');
+
+    if (reposError || !repos) return {};
+
+    const starsMap = {};
+
+    // Get latest star count for each repo
+    for (const repo of repos) {
+      const { data: latestMetric } = await supabase
+        .from('daily_metrics')
+        .select('total_stars')
+        .eq('repo_id', repo.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestMetric) {
+        const repoKey = `${repo.owner}/${repo.repo}`;
+        starsMap[repoKey] = latestMetric.total_stars || 0;
+      }
+    }
+
+    return starsMap;
+  } catch (error) {
+    console.error('Error fetching current stars:', error);
+    return {};
+  }
+}
+
 // Get milestones for a specific repo
 export async function getMilestonesForRepo(owner, repo) {
   if (!supabase) return [];
