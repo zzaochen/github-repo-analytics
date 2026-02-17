@@ -258,18 +258,12 @@ export async function getAggregateStats() {
   if (!supabase) return null;
 
   try {
-    // Get total repos count
-    const { count: totalRepos } = await supabase
-      .from('repositories')
-      .select('*', { count: 'exact', head: true });
-
-    // Get the latest metrics for each repo and sum them up
-    // First get all repo IDs
-    const { data: repos } = await supabase
+    // Get total repos count and their IDs
+    const { data: repos, error: reposError } = await supabase
       .from('repositories')
       .select('id');
 
-    if (!repos || repos.length === 0) {
+    if (reposError || !repos || repos.length === 0) {
       return {
         totalRepos: 0,
         totalCommits: 0,
@@ -280,31 +274,38 @@ export async function getAggregateStats() {
       };
     }
 
-    // For each repo, get the latest daily_metrics entry
+    const repoIds = repos.map(r => r.id);
+
+    // Get the latest metric for each repo in parallel (batch of promises)
+    const latestMetricsPromises = repoIds.map(repoId =>
+      supabase
+        .from('daily_metrics')
+        .select('total_commits, total_prs_opened, total_prs_merged, total_prs_closed')
+        .eq('repo_id', repoId)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single()
+    );
+
+    const results = await Promise.all(latestMetricsPromises);
+
+    // Sum up all the metrics
     let totalCommits = 0;
     let totalPRsOpened = 0;
     let totalPRsMerged = 0;
     let totalPRsClosed = 0;
 
-    for (const repo of repos) {
-      const { data: latestMetric } = await supabase
-        .from('daily_metrics')
-        .select('total_commits, total_prs_opened, total_prs_merged, total_prs_closed')
-        .eq('repo_id', repo.id)
-        .order('date', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (latestMetric) {
-        totalCommits += latestMetric.total_commits || 0;
-        totalPRsOpened += latestMetric.total_prs_opened || 0;
-        totalPRsMerged += latestMetric.total_prs_merged || 0;
-        totalPRsClosed += latestMetric.total_prs_closed || 0;
+    for (const result of results) {
+      if (result.data) {
+        totalCommits += result.data.total_commits || 0;
+        totalPRsOpened += result.data.total_prs_opened || 0;
+        totalPRsMerged += result.data.total_prs_merged || 0;
+        totalPRsClosed += result.data.total_prs_closed || 0;
       }
     }
 
     return {
-      totalRepos: totalRepos || 0,
+      totalRepos: repos.length,
       totalCommits,
       totalPRsOpened,
       totalPRsMerged,

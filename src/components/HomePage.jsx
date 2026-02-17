@@ -493,30 +493,30 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                   </h2>
                   <p className="text-gray-500 text-sm">Aggregate stats across all cached repositories</p>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-gray-600">Total Repos Cached</span>
-                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalRepos.toLocaleString('en-US')}</span>
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Total Repos Cached</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalRepos.toLocaleString('en-US')}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-gray-600">Total Commits (All Repos)</span>
-                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalCommits.toLocaleString('en-US')}</span>
+                    <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Total Commits (All Repos)</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalCommits.toLocaleString('en-US')}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-gray-600">Total PRs Opened (All Repos)</span>
-                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalPRsOpened.toLocaleString('en-US')}</span>
+                    <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Total PRs Opened (All Repos)</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalPRsOpened.toLocaleString('en-US')}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-gray-600">Total PRs Merged (All Repos)</span>
-                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalPRsMerged.toLocaleString('en-US')}</span>
+                    <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Total PRs Merged (All Repos)</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalPRsMerged.toLocaleString('en-US')}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-600">Total PRs Closed (All Repos)</span>
-                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalPRsClosed.toLocaleString('en-US')}</span>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-sm text-gray-600">Total PRs Closed (All Repos)</span>
+                      <span className="text-base font-bold text-gray-900">{aggregateStats.totalPRsClosed.toLocaleString('en-US')}</span>
                     </div>
                   </div>
-                  <p className="text-gray-400 text-sm italic mt-6">
+                  <p className="text-gray-400 text-xs italic mt-4">
                     As of {new Date(aggregateStats.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
