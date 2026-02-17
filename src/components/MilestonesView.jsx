@@ -308,6 +308,12 @@ export default function MilestonesView() {
             {/* Table */}
             <div className="p-4">
               {(() => {
+                // Helper to get current stars for a repo from repoMilestones
+                const getCurrentStars = (event) => {
+                  const repoKey = `${event.repositories?.owner}/${event.repositories?.repo}`;
+                  return repoMilestones[repoKey]?.latestStars || event.stars_at_crossing || 0;
+                };
+
                 const milestonesForType = filteredByDateMilestones
                   .filter(m => m.milestone_type === selectedMilestone)
                   .sort((a, b) => {
@@ -316,9 +322,9 @@ export default function MilestonesView() {
                       const dateB = new Date(b.crossed_at);
                       return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
                     } else if (sortConfig.column === 'stars') {
-                      return sortConfig.direction === 'asc'
-                        ? a.stars_at_crossing - b.stars_at_crossing
-                        : b.stars_at_crossing - a.stars_at_crossing;
+                      const starsA = getCurrentStars(a);
+                      const starsB = getCurrentStars(b);
+                      return sortConfig.direction === 'asc' ? starsA - starsB : starsB - starsA;
                     }
                     return 0;
                   });
@@ -350,13 +356,13 @@ export default function MilestonesView() {
                           className="pb-2 font-medium text-right cursor-pointer hover:text-gray-700 select-none"
                           onClick={() => handleSort('stars')}
                         >
-                          Stars<SortIcon column="stars" />
+                          Current Stars<SortIcon column="stars" />
                         </th>
                         <th
                           className="pb-2 font-medium text-right cursor-pointer hover:text-gray-700 select-none"
                           onClick={() => handleSort('date')}
                         >
-                          Date<SortIcon column="date" />
+                          Milestone Achievement Date<SortIcon column="date" />
                         </th>
                       </tr>
                     </thead>
@@ -375,7 +381,7 @@ export default function MilestonesView() {
                             </a>
                           </td>
                           <td className="py-1.5 text-right text-gray-600">
-                            {event.stars_at_crossing?.toLocaleString()}
+                            {getCurrentStars(event).toLocaleString()}
                           </td>
                           <td className="py-1.5 text-right text-gray-500">
                             {new Date(event.crossed_at).toLocaleDateString('en-US', {
