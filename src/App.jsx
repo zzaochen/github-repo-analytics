@@ -358,14 +358,6 @@ function App() {
     }
   };
 
-  // Helper to get overlap date (1 day before) to ensure we don't miss data
-  const getOverlapDate = (dateStr) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    date.setDate(date.getDate() - 1);
-    return date.toISOString().split('T')[0];
-  };
-
   // Handle "Update to Today" button - fetch new data since last cached date
   const handleUpdateToToday = async () => {
     if (!repoInfo) return;
@@ -380,15 +372,15 @@ function App() {
 
     try {
       const cached = await getRepoFromCache(owner, repo);
-      // Use 1-day overlap to ensure we don't miss data
-      const overlapDate = getOverlapDate(cached?.lastDate);
-      const sinceDate = overlapDate ? `${overlapDate}T00:00:00Z` : null;
+      // Use lastDate directly - we'll overwrite the last day and add new days
+      // This ensures: keep data before lastDate, overwrite lastDate, add new days
+      const lastDate = cached?.lastDate;
+      const sinceDate = lastDate ? `${lastDate}T00:00:00Z` : null;
 
       // Debug logging
       console.log('=== Update to Today Debug ===');
-      console.log('cached.lastDate:', cached?.lastDate);
-      console.log('overlapDate:', overlapDate);
-      console.log('sinceDate:', sinceDate);
+      console.log('cached.lastDate:', lastDate);
+      console.log('sinceDate (will overwrite this day + add new):', sinceDate);
 
       // For "Update to Today", ALWAYS use date-based approach (not cursor)
       // Cursor is only for "Continue Fetching" interrupted fetches
@@ -398,12 +390,12 @@ function App() {
         stars: { cursor: null },
         forks: { lastPage: null },
         prs: { lastPage: null },
-        issues: { lastDate: overlapDate },
-        commits: { lastDate: overlapDate },
+        issues: { lastDate: lastDate },
+        commits: { lastDate: lastDate },
         sinceDate: sinceDate
       };
 
-      console.log('Using date-based incremental fetch with sinceDate:', sinceDate);
+      console.log('Data before', lastDate, 'will be kept, data from', lastDate, 'onwards will be refreshed');
       console.log('=== End Debug ===');
 
       // Get existing counts from last cached metric for progress display
@@ -491,15 +483,16 @@ function App() {
           }
 
           // Use date-based incremental fetch (not cursor-based)
-          // This ensures we only fetch new data since lastDate
-          const overlapDate = getOverlapDate(cached?.lastDate);
-          const sinceDate = overlapDate ? `${overlapDate}T00:00:00Z` : null;
+          // Use lastDate directly - we'll overwrite the last day and add new days
+          // This ensures: keep data before lastDate, overwrite lastDate, add new days
+          const lastDate = cached?.lastDate;
+          const sinceDate = lastDate ? `${lastDate}T00:00:00Z` : null;
           const resumeState = {
             stars: { cursor: null },
             forks: { lastPage: null },
             prs: { lastPage: null },
-            issues: { lastDate: overlapDate },
-            commits: { lastDate: overlapDate },
+            issues: { lastDate: lastDate },
+            commits: { lastDate: lastDate },
             sinceDate: sinceDate
           };
 
