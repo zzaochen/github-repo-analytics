@@ -58,6 +58,11 @@ export default function TrendingView({ token }) {
     getLastCronRun(trendingPeriod).then(setLastCronRun);
   }, [trendingPeriod]);
 
+  // Auto-fetch trending on mount and when period changes
+  useEffect(() => {
+    checkTrending();
+  }, [trendingPeriod]);
+
   const checkTrending = async () => {
     setLoading(true);
     setError(null);
@@ -292,12 +297,7 @@ export default function TrendingView({ token }) {
           {Object.entries(PERIODS).map(([key, { label }]) => (
             <button
               key={key}
-              onClick={() => {
-                setTrendingPeriod(key);
-                setTrendingRepos([]);
-                setNewRepos([]);
-                setLastChecked(null);
-              }}
+              onClick={() => setTrendingPeriod(key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 trendingPeriod === key
                   ? 'bg-blue-500 text-white'
