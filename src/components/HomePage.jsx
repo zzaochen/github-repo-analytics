@@ -230,7 +230,7 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
           <p className="text-gray-500 text-sm">
             Discover the most popular repositories right now
             {fetchedAt && (
-              <span className="text-gray-400">
+              <span className="text-gray-500">
                 {' '}(as of {fetchedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
               </span>
             )}
