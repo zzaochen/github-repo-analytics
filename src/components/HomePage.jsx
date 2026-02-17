@@ -309,7 +309,7 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                 )}
 
                 {!loading && !error && repos.length > 0 && (
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs">
                     <thead>
                       <tr className="text-left text-gray-500 text-xs">
                         <th className="pb-2 font-medium w-6">#</th>
