@@ -231,7 +231,6 @@ function App() {
 
       let finalData;
       const cached = await getRepoFromCache(owner, repo);
-      const sinceDate = resumeState?.sinceDate;
 
       if (sinceDate && cached && cached.metrics.length > 0) {
         // Incremental update: use the new function that continues from existing totals
