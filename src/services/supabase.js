@@ -9,6 +9,41 @@ export const supabase = supabaseUrl && supabaseAnonKey
 
 console.log('Supabase client initialized:', !!supabase, 'URL:', supabaseUrl ? 'set' : 'missing');
 
+// GitHub OAuth functions
+export async function signInWithGitHub() {
+  if (!supabase) return { error: 'Supabase not initialized' };
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      scopes: 'read:user repo',
+      redirectTo: window.location.origin
+    }
+  });
+
+  return { data, error };
+}
+
+export async function signOut() {
+  if (!supabase) return { error: 'Supabase not initialized' };
+
+  const { error } = await supabase.auth.signOut();
+  return { error };
+}
+
+export async function getSession() {
+  if (!supabase) return null;
+
+  const { data: { session } } = await supabase.auth.getSession();
+  return session;
+}
+
+export function onAuthStateChange(callback) {
+  if (!supabase) return { data: { subscription: { unsubscribe: () => {} } } };
+
+  return supabase.auth.onAuthStateChange(callback);
+}
+
 export async function getRepoFromCache(owner, repo) {
   console.log('getRepoFromCache called for:', owner, repo, 'supabase:', !!supabase);
   if (!supabase) return null;
