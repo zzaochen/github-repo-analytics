@@ -277,29 +277,33 @@ export default function MilestonesView() {
                   </svg>
                   Recent Achievements
                 </h2>
-                <div className="flex items-center gap-2">
-                  {/* Milestone dropdown */}
-                  <select
-                    value={selectedMilestone}
-                    onChange={(e) => setSelectedMilestone(e.target.value)}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {[...STAR_MILESTONES].reverse().map(m => (
-                      <option key={m.type} value={m.type}>{m.label}</option>
-                    ))}
-                  </select>
-                  {/* Date filter dropdown */}
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {DATE_FILTERS.map(df => (
-                      <option key={df.key} value={df.key}>{df.label}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Milestone dropdown */}
+                <select
+                  value={selectedMilestone}
+                  onChange={(e) => setSelectedMilestone(e.target.value)}
+                  className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {[...STAR_MILESTONES].reverse().map(m => (
+                    <option key={m.type} value={m.type}>{m.label}</option>
+                  ))}
+                </select>
               </div>
+            </div>
+            {/* Date filter toggles */}
+            <div className="px-4 py-2 border-b border-gray-100 flex gap-1">
+              {DATE_FILTERS.map(df => (
+                <button
+                  key={df.key}
+                  onClick={() => setDateFilter(df.key)}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                    dateFilter === df.key
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {df.label}
+                </button>
+              ))}
             </div>
             {/* Table */}
             <div className="p-4">
