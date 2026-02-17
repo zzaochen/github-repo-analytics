@@ -165,69 +165,124 @@ export default function MilestonesView() {
         ))}
       </div>
 
-      {/* Milestones Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm w-1/2">
-        <div className="p-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <svg className="w-6 h-6 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-          ) : filteredRepos.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="text-4xl mb-4">🎯</div>
-              <p className="text-lg">No milestones recorded yet</p>
-              <p className="text-sm mt-2">
-                Milestones are recorded when repos cross 5K, 10K, 25K, 50K, or 100K stars during data refresh
-              </p>
-            </div>
-          ) : (
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs">
-                  <th className="pb-2 font-medium w-8">#</th>
-                  <th className="pb-2 font-medium">Repository</th>
-                  <th className="pb-2 font-medium text-right w-20">Stars</th>
-                  {[...STAR_MILESTONES].reverse().map(milestone => (
-                    <th key={milestone.type} className="pb-2 font-medium text-center w-12">
-                      {milestone.label.replace(' Stars', '')}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRepos.map((repo, index) => (
-                  <tr key={repo.fullName} className="border-t border-gray-100">
-                    <td className="py-1.5 text-gray-400">{index + 1}</td>
-                    <td className="py-1.5">
-                      <a
-                        href={`https://github.com/${repo.fullName}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {repo.fullName}
-                      </a>
-                    </td>
-                    <td className="py-1.5 text-right text-gray-600">
-                      {repo.latestStars.toLocaleString()}
-                    </td>
+      <div className="flex gap-6">
+        {/* Milestones Table - Left Side */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm w-1/2">
+          <div className="p-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <svg className="w-6 h-6 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            ) : filteredRepos.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-4">🎯</div>
+                <p className="text-lg">No milestones recorded yet</p>
+                <p className="text-sm mt-2">
+                  Milestones are recorded when repos cross 5K, 10K, 25K, 50K, or 100K stars during data refresh
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-500 text-xs">
+                    <th className="pb-2 font-medium w-8">#</th>
+                    <th className="pb-2 font-medium">Repository</th>
+                    <th className="pb-2 font-medium text-right w-20">Stars</th>
                     {[...STAR_MILESTONES].reverse().map(milestone => (
-                      <td key={milestone.type} className="py-1.5 text-center">
-                        {repo.milestones[milestone.type] ? (
-                          <span className="text-green-600">✓</span>
-                        ) : (
-                          <span className="text-gray-300">-</span>
-                        )}
-                      </td>
+                      <th key={milestone.type} className="pb-2 font-medium text-center w-12">
+                        {milestone.label.replace(' Stars', '')}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {filteredRepos.map((repo, index) => (
+                    <tr key={repo.fullName} className="border-t border-gray-100">
+                      <td className="py-1.5 text-gray-400">{index + 1}</td>
+                      <td className="py-1.5">
+                        <a
+                          href={`https://github.com/${repo.fullName}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {repo.fullName}
+                        </a>
+                      </td>
+                      <td className="py-1.5 text-right text-gray-600">
+                        {repo.latestStars.toLocaleString()}
+                      </td>
+                      {[...STAR_MILESTONES].reverse().map(milestone => (
+                        <td key={milestone.type} className="py-1.5 text-center">
+                          {repo.milestones[milestone.type] ? (
+                            <span className="text-green-600">✓</span>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Milestones - Right Side */}
+        <div className="w-1/2 space-y-4">
+          <h3 className="text-sm font-semibold text-gray-700">Recent Milestone Achievements</h3>
+          <div className="grid grid-cols-1 gap-3">
+            {[...STAR_MILESTONES].reverse().map(milestone => {
+              const recentForMilestone = milestones
+                .filter(m => m.milestone_type === milestone.type)
+                .sort((a, b) => new Date(b.crossed_at) - new Date(a.crossed_at))
+                .slice(0, 5);
+
+              return (
+                <div
+                  key={milestone.type}
+                  className={`rounded-lg border p-3 ${getMilestoneColor(milestone.type)}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span>{getMilestoneIcon(milestone.type)}</span>
+                    <span className="font-semibold text-sm">{milestone.label}</span>
+                  </div>
+                  {recentForMilestone.length === 0 ? (
+                    <p className="text-xs opacity-75">No repos yet</p>
+                  ) : (
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {recentForMilestone.map(event => (
+                          <tr key={event.id} className="border-t border-current border-opacity-20">
+                            <td className="py-1">
+                              <a
+                                href={`https://github.com/${event.repositories?.owner}/${event.repositories?.repo}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline"
+                              >
+                                {event.repositories?.owner}/{event.repositories?.repo}
+                              </a>
+                            </td>
+                            <td className="py-1 text-right opacity-75">
+                              {new Date(event.crossed_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
