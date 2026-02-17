@@ -534,10 +534,10 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                       <div className="flex">
                         {[
                           { key: 'all', label: 'All' },
-                          { key: '7d', label: '7d' },
-                          { key: '30d', label: '30d' },
-                          { key: '90d', label: '90d' },
-                          { key: '1y', label: '1y' },
+                          { key: '7d', label: '1W' },
+                          { key: '30d', label: '1M' },
+                          { key: '90d', label: '3M' },
+                          { key: '1y', label: '1Y' },
                           { key: 'custom', label: 'Custom' }
                         ].map(({ key, label }, index, arr) => (
                           <button
