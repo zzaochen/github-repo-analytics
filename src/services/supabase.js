@@ -1139,22 +1139,26 @@ export async function getCurrentStarsForAllRepos() {
 
     if (reposError || !repos) return {};
 
-    const starsMap = {};
-
-    // Get latest star count for each repo
-    for (const repo of repos) {
-      const { data: latestMetric } = await supabase
+    // Fetch latest star counts in parallel for all repos
+    const promises = repos.map(repo =>
+      supabase
         .from('daily_metrics')
         .select('total_stars')
         .eq('repo_id', repo.id)
         .order('date', { ascending: false })
         .limit(1)
-        .single();
+        .single()
+        .then(({ data }) => ({
+          repoKey: `${repo.owner}/${repo.repo}`,
+          stars: data?.total_stars || 0
+        }))
+    );
 
-      if (latestMetric) {
-        const repoKey = `${repo.owner}/${repo.repo}`;
-        starsMap[repoKey] = latestMetric.total_stars || 0;
-      }
+    const results = await Promise.all(promises);
+
+    const starsMap = {};
+    for (const { repoKey, stars } of results) {
+      starsMap[repoKey] = stars;
     }
 
     return starsMap;
