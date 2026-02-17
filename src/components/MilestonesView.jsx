@@ -123,7 +123,7 @@ export default function MilestonesView() {
 
       {/* Stats summary */}
       <div className="grid grid-cols-5 gap-4 mb-6">
-        {STAR_MILESTONES.map(milestone => {
+        {[...STAR_MILESTONES].reverse().map(milestone => {
           const count = repoList.filter(repo => repo.milestones[milestone.type]).length;
           return (
             <div
@@ -150,7 +150,7 @@ export default function MilestonesView() {
         >
           All
         </button>
-        {STAR_MILESTONES.map(milestone => (
+        {[...STAR_MILESTONES].reverse().map(milestone => (
           <button
             key={milestone.type}
             onClick={() => setFilter(milestone.type)}
@@ -190,7 +190,7 @@ export default function MilestonesView() {
                   <th className="pb-2 font-medium w-8">#</th>
                   <th className="pb-2 font-medium">Repository</th>
                   <th className="pb-2 font-medium text-right w-20">Stars</th>
-                  {STAR_MILESTONES.map(milestone => (
+                  {[...STAR_MILESTONES].reverse().map(milestone => (
                     <th key={milestone.type} className="pb-2 font-medium text-center w-12">
                       {milestone.label.replace(' Stars', '')}
                     </th>
@@ -214,7 +214,7 @@ export default function MilestonesView() {
                     <td className="py-1.5 text-right text-gray-600">
                       {repo.latestStars.toLocaleString()}
                     </td>
-                    {STAR_MILESTONES.map(milestone => (
+                    {[...STAR_MILESTONES].reverse().map(milestone => (
                       <td key={milestone.type} className="py-1.5 text-center">
                         {repo.milestones[milestone.type] ? (
                           <span className="text-green-600">✓</span>
