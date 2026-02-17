@@ -345,11 +345,11 @@ export default function MilestonesView() {
                 };
 
                 const SortIcon = ({ column }) => (
-                  sortConfig.column === column ? (
-                    <span className="ml-1 inline-block">
-                      {sortConfig.direction === 'desc' ? '↓' : '↑'}
-                    </span>
-                  ) : null
+                  <span className="ml-1 inline-block text-gray-400">
+                    {sortConfig.column === column
+                      ? (sortConfig.direction === 'desc' ? '↓' : '↑')
+                      : '↕'}
+                  </span>
                 );
 
                 return milestonesForType.length === 0 ? (
