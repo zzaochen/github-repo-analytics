@@ -348,7 +348,7 @@ export default function MilestonesView() {
                   <span className="ml-1 inline-block">
                     {sortConfig.column === column
                       ? (sortConfig.direction === 'desc' ? '↓' : '↑')
-                      : '↕'}
+                      : '\u2195'}
                   </span>
                 );
 
