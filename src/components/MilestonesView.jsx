@@ -122,17 +122,17 @@ export default function MilestonesView() {
       </div>
 
       {/* Stats summary */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="flex gap-4 mb-6">
         {[...STAR_MILESTONES].reverse().map(milestone => {
           const count = repoList.filter(repo => repo.milestones[milestone.type]).length;
           return (
             <div
               key={milestone.type}
-              className={`p-4 rounded-lg border ${getMilestoneColor(milestone.type)}`}
+              className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${getMilestoneColor(milestone.type)}`}
             >
-              <div className="text-2xl mb-1">{getMilestoneIcon(milestone.type)}</div>
-              <div className="text-2xl font-bold">{count}</div>
-              <div className="text-xs opacity-75">{milestone.label}</div>
+              <span className="text-xl">{getMilestoneIcon(milestone.type)}</span>
+              <span className="text-xl font-bold">{count}</span>
+              <span className="text-xs opacity-75">{milestone.label}</span>
             </div>
           );
         })}
