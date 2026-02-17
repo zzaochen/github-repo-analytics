@@ -1128,4 +1128,64 @@ export async function getMilestonesForRepo(owner, repo) {
   }
 }
 
+// Backfill milestones for ALL existing cached repos
+export async function backfillAllMilestones() {
+  if (!supabase) return { success: false, message: 'Supabase not initialized' };
+
+  try {
+    // Get all repositories with their latest star counts
+    const { data: repos, error: reposError } = await supabase
+      .from('repositories')
+      .select('id, owner, repo');
+
+    if (reposError || !repos) {
+      return { success: false, message: reposError?.message || 'No repos found' };
+    }
+
+    let processed = 0;
+    let milestonesAdded = 0;
+
+    for (const repo of repos) {
+      // Get the latest star count for this repo
+      const { data: latestMetric } = await supabase
+        .from('daily_metrics')
+        .select('total_stars')
+        .eq('repo_id', repo.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestMetric && latestMetric.total_stars > 0) {
+        // Check each milestone
+        for (const milestone of STAR_MILESTONES) {
+          if (latestMetric.total_stars >= milestone.value) {
+            // Try to insert (will be ignored if already exists due to UNIQUE constraint)
+            const { data, error } = await supabase
+              .from('milestone_events')
+              .upsert({
+                repo_id: repo.id,
+                milestone_type: milestone.type,
+                milestone_value: milestone.value,
+                stars_at_crossing: latestMetric.total_stars,
+                crossed_at: new Date().toISOString()
+              }, { onConflict: 'repo_id,milestone_type', ignoreDuplicates: true })
+              .select();
+
+            if (!error && data && data.length > 0) {
+              milestonesAdded++;
+            }
+          }
+        }
+        processed++;
+      }
+    }
+
+    console.log(`Backfilled milestones: ${processed} repos processed, ${milestonesAdded} milestones added`);
+    return { success: true, processed, milestonesAdded };
+  } catch (error) {
+    console.error('Error backfilling milestones:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 export { STAR_MILESTONES };
