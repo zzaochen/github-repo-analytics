@@ -783,7 +783,7 @@ function App() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Milestones
+                Repo Milestones
               </Link>
 
               {/* Auth Button */}
