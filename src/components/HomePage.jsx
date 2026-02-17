@@ -406,7 +406,7 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
         });
 
         return (
-          <div className="mt-8">
+          <div className="mt-8 w-1/2">
             <div className="mb-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor">
