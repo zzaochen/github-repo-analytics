@@ -345,7 +345,7 @@ export default function MilestonesView() {
                 };
 
                 const SortIcon = ({ column }) => (
-                  <span className="ml-1 inline-block text-gray-400">
+                  <span className="ml-1 inline-block">
                     {sortConfig.column === column
                       ? (sortConfig.direction === 'desc' ? '↓' : '↑')
                       : '↕'}
