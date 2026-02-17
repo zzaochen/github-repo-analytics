@@ -235,43 +235,52 @@ export default function MilestonesView() {
         {/* Recent Milestones - Right Side */}
         <div className="w-1/2 space-y-4">
           <h3 className="text-sm font-semibold text-gray-700">Recent Milestone Achievements</h3>
-          <div className="grid grid-cols-1 gap-3">
-            {[...STAR_MILESTONES].reverse().map(milestone => {
-              const recentForMilestone = milestones
-                .filter(m => m.milestone_type === milestone.type)
-                .sort((a, b) => new Date(b.crossed_at) - new Date(a.crossed_at))
-                .slice(0, 5);
+          {[...STAR_MILESTONES].reverse().map(milestone => {
+            const recentForMilestone = milestones
+              .filter(m => m.milestone_type === milestone.type)
+              .sort((a, b) => new Date(b.crossed_at) - new Date(a.crossed_at))
+              .slice(0, 5);
 
-              return (
-                <div
-                  key={milestone.type}
-                  className={`rounded-lg border p-3 ${getMilestoneColor(milestone.type)}`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span>{getMilestoneIcon(milestone.type)}</span>
-                    <span className="font-semibold text-sm">{milestone.label}</span>
-                  </div>
+            return (
+              <div
+                key={milestone.type}
+                className="bg-white border border-gray-200 rounded-lg shadow-sm"
+              >
+                <div className={`px-4 py-2 border-b border-gray-200 rounded-t-lg flex items-center gap-2 ${getMilestoneColor(milestone.type)}`}>
+                  <span>{getMilestoneIcon(milestone.type)}</span>
+                  <span className="font-semibold text-sm">{milestone.label}</span>
+                </div>
+                <div className="p-4">
                   {recentForMilestone.length === 0 ? (
-                    <p className="text-xs opacity-75">No repos yet</p>
+                    <p className="text-xs text-gray-500">No repos yet</p>
                   ) : (
                     <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 text-xs">
+                          <th className="pb-2 font-medium w-8">#</th>
+                          <th className="pb-2 font-medium">Repository</th>
+                          <th className="pb-2 font-medium text-right">Date</th>
+                        </tr>
+                      </thead>
                       <tbody>
-                        {recentForMilestone.map(event => (
-                          <tr key={event.id} className="border-t border-current border-opacity-20">
-                            <td className="py-1">
+                        {recentForMilestone.map((event, index) => (
+                          <tr key={event.id} className="border-t border-gray-100">
+                            <td className="py-1.5 text-gray-400">{index + 1}</td>
+                            <td className="py-1.5">
                               <a
                                 href={`https://github.com/${event.repositories?.owner}/${event.repositories?.repo}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="hover:underline"
+                                className="text-blue-600 hover:underline"
                               >
                                 {event.repositories?.owner}/{event.repositories?.repo}
                               </a>
                             </td>
-                            <td className="py-1 text-right opacity-75">
+                            <td className="py-1.5 text-right text-gray-500">
                               {new Date(event.crossed_at).toLocaleDateString('en-US', {
                                 month: 'short',
-                                day: 'numeric'
+                                day: 'numeric',
+                                year: 'numeric'
                               })}
                             </td>
                           </tr>
@@ -280,9 +289,9 @@ export default function MilestonesView() {
                     </table>
                   )}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
