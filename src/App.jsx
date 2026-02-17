@@ -513,8 +513,12 @@ function App() {
 
   // Handle refreshing all cached repos (update data + calculate MoM metrics)
   const handleRefreshAll = async () => {
+    if (!user) {
+      setError('Please sign in to refresh repositories.');
+      return;
+    }
     if (!token) {
-      setError('No GitHub token found. Please enter your token first.');
+      setError('No GitHub token found. Please sign in again.');
       return;
     }
 
@@ -619,6 +623,10 @@ function App() {
   // Handle deleting a repo from cache and re-fetching fresh
   const handleDeleteAndRefetch = async () => {
     if (!repoInfo) return;
+    if (!user) {
+      setError('Please sign in to delete and re-fetch repositories.');
+      return;
+    }
 
     const [owner, repo] = repoInfo.name.split('/');
     const token = localStorage.getItem('github_analytics_token');
@@ -676,6 +684,7 @@ function App() {
           <div className="flex-1 overflow-y-auto">
             <BatchFetch
               token={token}
+              user={user}
               onComplete={() => setCacheKey(k => k + 1)}
             />
 
@@ -687,9 +696,9 @@ function App() {
               <h3 className="text-sm font-medium text-gray-700 mb-3">All Cached Repositories</h3>
               <button
                 onClick={handleRefreshAll}
-                disabled={refreshingAll || !token}
+                disabled={refreshingAll || !user}
                 className="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                title="Update all cached repositories and calculate MoM metrics"
+                title={user ? "Update all cached repositories and calculate MoM metrics" : "Sign in to refresh repositories"}
               >
                 {refreshingAll ? (
                   <svg className="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

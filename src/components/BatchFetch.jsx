@@ -11,7 +11,7 @@ import {
 import { saveRepoToCache } from '../services/supabase';
 import { aggregateToDaily } from '../utils/dataAggregator';
 
-export default function BatchFetch({ token, onComplete }) {
+export default function BatchFetch({ token, user, onComplete }) {
   const [repoList, setRepoList] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [progress, setProgress] = useState({}); // { 'owner/repo': { status: 'pending' | 'fetching' | 'done' | 'error', message: '', errorDetails: '' } }
@@ -129,7 +129,7 @@ export default function BatchFetch({ token, onComplete }) {
 
   const handleStartFetch = async () => {
     const repos = parseRepos(repoList);
-    if (repos.length === 0 || !token) return;
+    if (repos.length === 0 || !token || !user) return;
 
     abortRef.current = false;
     setIsFetching(true);
@@ -203,8 +203,9 @@ export default function BatchFetch({ token, onComplete }) {
           {!isFetching ? (
             <button
               onClick={handleStartFetch}
-              disabled={repos.length === 0 || !token}
+              disabled={repos.length === 0 || !user}
               className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs transition-colors"
+              title={user ? "Fetch all repositories" : "Sign in to fetch repositories"}
             >
               Fetch All
             </button>
