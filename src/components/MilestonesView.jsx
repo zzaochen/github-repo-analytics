@@ -128,7 +128,7 @@ export default function MilestonesView() {
           return (
             <div
               key={milestone.type}
-              className={`px-4 py-3 rounded-lg border flex items-center justify-center gap-2 ${getMilestoneColor(milestone.type)}`}
+              className={`px-4 py-3 rounded-lg border flex items-center gap-2 ${getMilestoneColor(milestone.type)}`}
             >
               <span className="text-xl">{getMilestoneIcon(milestone.type)}</span>
               <span className="text-xl font-bold">{count}</span>
