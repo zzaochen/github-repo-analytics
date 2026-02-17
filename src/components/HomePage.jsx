@@ -56,6 +56,9 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
 
   // Aggregate stats
   const [aggregateStats, setAggregateStats] = useState(null);
+  const [statsDateFilter, setStatsDateFilter] = useState('all'); // 'all', '7d', '30d', '90d', '1y', 'custom'
+  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
     // Check cache first
@@ -97,10 +100,41 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
     getRecentlyAddedRepos(48).then(setRecentlyAdded);
   }, []);
 
-  // Load aggregate stats
+  // Load aggregate stats with date filter
   useEffect(() => {
-    getAggregateStats().then(setAggregateStats);
-  }, []);
+    const loadStats = async () => {
+      setStatsLoading(true);
+      let dateFilter = null;
+
+      if (statsDateFilter !== 'all') {
+        const endDate = new Date().toISOString().split('T')[0];
+        let startDate;
+
+        if (statsDateFilter === '7d') {
+          startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        } else if (statsDateFilter === '30d') {
+          startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        } else if (statsDateFilter === '90d') {
+          startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        } else if (statsDateFilter === '1y') {
+          startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        } else if (statsDateFilter === 'custom' && customDateRange.start && customDateRange.end) {
+          startDate = customDateRange.start;
+          dateFilter = { startDate, endDate: customDateRange.end };
+        }
+
+        if (statsDateFilter !== 'custom' && startDate) {
+          dateFilter = { startDate, endDate };
+        }
+      }
+
+      const stats = await getAggregateStats(dateFilter);
+      setAggregateStats(stats);
+      setStatsLoading(false);
+    };
+
+    loadStats();
+  }, [statsDateFilter, customDateRange.start, customDateRange.end]);
 
   // Handle click outside dropdown
   useEffect(() => {
@@ -482,7 +516,7 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
             )}
 
             {/* Stats Summary */}
-            {aggregateStats && (
+            {(aggregateStats || statsLoading) && (
               <div className="w-1/2">
                 <div className="mb-4">
                   <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
@@ -494,39 +528,103 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                   <p className="text-gray-500 text-sm">Aggregate stats across all cached repositories</p>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                      <span className="text-xs text-gray-600">Total Repos Cached</span>
-                      <span className="text-xs font-bold text-gray-900">{aggregateStats.totalRepos.toLocaleString('en-US')}</span>
+                  {/* Date Filter Controls */}
+                  <div className="mb-4 pb-3 border-b border-gray-200">
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {[
+                        { key: 'all', label: 'All Time' },
+                        { key: '7d', label: '7 Days' },
+                        { key: '30d', label: '30 Days' },
+                        { key: '90d', label: '90 Days' },
+                        { key: '1y', label: '1 Year' },
+                        { key: 'custom', label: 'Custom' }
+                      ].map(({ key, label }) => (
+                        <button
+                          key={key}
+                          onClick={() => setStatsDateFilter(key)}
+                          className={`px-2 py-1 text-xs rounded transition-colors ${
+                            statsDateFilter === key
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
-                    <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                      <span className="text-xs text-gray-600">Total Stars (All Repos)</span>
-                      <span className="text-xs font-bold text-gray-900">{aggregateStats.totalStars.toLocaleString('en-US')}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                      <span className="text-xs text-gray-600">Total Forks (All Repos)</span>
-                      <span className="text-xs font-bold text-gray-900">{aggregateStats.totalForks.toLocaleString('en-US')}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                      <span className="text-xs text-gray-600">Total Contributors (All Repos)</span>
-                      <span className="text-xs font-bold text-gray-900">{aggregateStats.totalContributors.toLocaleString('en-US')}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                      <span className="text-xs text-gray-600">Total PRs Opened (All Repos)</span>
-                      <span className="text-xs font-bold text-gray-900">{aggregateStats.totalPRsOpened.toLocaleString('en-US')}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                      <span className="text-xs text-gray-600">Total PRs Merged (All Repos)</span>
-                      <span className="text-xs font-bold text-gray-900">{aggregateStats.totalPRsMerged.toLocaleString('en-US')}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1">
-                      <span className="text-xs text-gray-600">Total PRs Closed (All Repos)</span>
-                      <span className="text-xs font-bold text-gray-900">{aggregateStats.totalPRsClosed.toLocaleString('en-US')}</span>
-                    </div>
+                    {statsDateFilter === 'custom' && (
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          type="date"
+                          value={customDateRange.start}
+                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                          className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-400 text-xs self-center">to</span>
+                        <input
+                          type="date"
+                          value={customDateRange.end}
+                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                          className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-gray-400 text-xs italic mt-3">
-                    As of {new Date(aggregateStats.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </p>
+
+                  {statsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <svg className="w-6 h-6 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  ) : aggregateStats && (
+                    <>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">Total Repos Cached</span>
+                          <span className="text-xs font-bold text-gray-900">{aggregateStats.totalRepos.toLocaleString('en-US')}</span>
+                        </div>
+                        {aggregateStats.reposWithData !== undefined && aggregateStats.reposWithData !== aggregateStats.totalRepos && (
+                          <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                            <span className="text-xs text-gray-600">Repos with Data in Range</span>
+                            <span className="text-xs font-bold text-gray-900">{aggregateStats.reposWithData.toLocaleString('en-US')}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">Total Stars</span>
+                          <span className="text-xs font-bold text-gray-900">{aggregateStats.totalStars.toLocaleString('en-US')}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">Total Forks</span>
+                          <span className="text-xs font-bold text-gray-900">{aggregateStats.totalForks.toLocaleString('en-US')}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">Total Contributors</span>
+                          <span className="text-xs font-bold text-gray-900">{aggregateStats.totalContributors.toLocaleString('en-US')}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">Total PRs Opened</span>
+                          <span className="text-xs font-bold text-gray-900">{aggregateStats.totalPRsOpened.toLocaleString('en-US')}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">Total PRs Merged</span>
+                          <span className="text-xs font-bold text-gray-900">{aggregateStats.totalPRsMerged.toLocaleString('en-US')}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-xs text-gray-600">Total PRs Closed</span>
+                          <span className="text-xs font-bold text-gray-900">{aggregateStats.totalPRsClosed.toLocaleString('en-US')}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-xs italic mt-3">
+                        {statsDateFilter !== 'all' && aggregateStats.dateFilter ? (
+                          <>Data from {aggregateStats.dateFilter.startDate} to {aggregateStats.dateFilter.endDate}</>
+                        ) : (
+                          <>As of {new Date(aggregateStats.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                        )}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             )}

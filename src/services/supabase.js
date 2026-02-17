@@ -314,7 +314,8 @@ export async function getRecentlyAddedRepos(hoursAgo = 24) {
 }
 
 // Get aggregate stats across all cached repos
-export async function getAggregateStats() {
+// Optional dateFilter: { startDate, endDate } to filter metrics by date range
+export async function getAggregateStats(dateFilter = null) {
   if (!supabase) return null;
 
   try {
@@ -332,22 +333,33 @@ export async function getAggregateStats() {
         totalPRsOpened: 0,
         totalPRsMerged: 0,
         totalPRsClosed: 0,
-        asOf: new Date().toISOString()
+        asOf: new Date().toISOString(),
+        dateFilter
       };
     }
 
     const repoIds = repos.map(r => r.id);
 
     // Get the latest metric for each repo in parallel (batch of promises)
-    const latestMetricsPromises = repoIds.map(repoId =>
-      supabase
+    // If date filter is provided, get the latest metric within that range
+    const latestMetricsPromises = repoIds.map(repoId => {
+      let query = supabase
         .from('daily_metrics')
         .select('total_stars, total_forks, total_contributors, total_prs_opened, total_prs_merged, total_prs_closed')
-        .eq('repo_id', repoId)
+        .eq('repo_id', repoId);
+
+      if (dateFilter?.endDate) {
+        query = query.lte('date', dateFilter.endDate);
+      }
+      if (dateFilter?.startDate) {
+        query = query.gte('date', dateFilter.startDate);
+      }
+
+      return query
         .order('date', { ascending: false })
         .limit(1)
-        .single()
-    );
+        .single();
+    });
 
     const results = await Promise.all(latestMetricsPromises);
 
@@ -358,6 +370,7 @@ export async function getAggregateStats() {
     let totalPRsOpened = 0;
     let totalPRsMerged = 0;
     let totalPRsClosed = 0;
+    let reposWithData = 0;
 
     for (const result of results) {
       if (result.data) {
@@ -367,18 +380,21 @@ export async function getAggregateStats() {
         totalPRsOpened += result.data.total_prs_opened || 0;
         totalPRsMerged += result.data.total_prs_merged || 0;
         totalPRsClosed += result.data.total_prs_closed || 0;
+        reposWithData++;
       }
     }
 
     return {
       totalRepos: repos.length,
+      reposWithData,
       totalStars,
       totalForks,
       totalContributors,
       totalPRsOpened,
       totalPRsMerged,
       totalPRsClosed,
-      asOf: new Date().toISOString()
+      asOf: new Date().toISOString(),
+      dateFilter
     };
   } catch (error) {
     console.error('Error fetching aggregate stats:', error);
