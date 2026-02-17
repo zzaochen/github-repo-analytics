@@ -338,7 +338,7 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                           <td className="py-1.5 text-right text-green-600 font-medium">+{formatNumber(repo.starsGained)}</td>
                           <td className="py-1.5 text-right text-green-600 font-medium">
                             {repo.stars > repo.starsGained
-                              ? `+${((repo.starsGained / (repo.stars - repo.starsGained)) * 100).toFixed(1)}%`
+                              ? `+${Math.round((repo.starsGained / (repo.stars - repo.starsGained)) * 100).toLocaleString('en-US')}%`
                               : 'New'}
                           </td>
                         </tr>
