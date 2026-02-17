@@ -13,6 +13,8 @@ export default function MilestonesView() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'stars_5k', 'stars_10k', 'stars_25k', etc.
   const [dateFilter, setDateFilter] = useState('all'); // 'all', 'week', 'month', '3months'
+  const [selectedMilestone, setSelectedMilestone] = useState('stars_100k'); // For right panel dropdown
+  const [sortConfig, setSortConfig] = useState({ column: 'date', direction: 'desc' }); // For right panel sorting
 
   // Filter milestones by date
   const getDateFilteredMilestones = (data) => {
@@ -265,89 +267,128 @@ export default function MilestonesView() {
 
         {/* Recent Milestones - Right Side */}
         <div className="w-1/2">
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                Recent Achievements
-              </h2>
-              <div className="flex gap-1">
-                {DATE_FILTERS.map(df => (
-                  <button
-                    key={df.key}
-                    onClick={() => setDateFilter(df.key)}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                      dateFilter === df.key
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  Recent Achievements
+                </h2>
+                <div className="flex items-center gap-2">
+                  {/* Milestone dropdown */}
+                  <select
+                    value={selectedMilestone}
+                    onChange={(e) => setSelectedMilestone(e.target.value)}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {df.label}
-                  </button>
-                ))}
+                    {[...STAR_MILESTONES].reverse().map(m => (
+                      <option key={m.type} value={m.type}>{m.label}</option>
+                    ))}
+                  </select>
+                  {/* Date filter dropdown */}
+                  <select
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {DATE_FILTERS.map(df => (
+                      <option key={df.key} value={df.key}>{df.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-            <p className="text-gray-500 text-sm">Latest repos to hit star milestones</p>
-          </div>
-          <div className="space-y-4">
-          {[...STAR_MILESTONES].reverse().map(milestone => {
-            const recentForMilestone = filteredByDateMilestones
-              .filter(m => m.milestone_type === milestone.type)
-              .sort((a, b) => new Date(b.crossed_at) - new Date(a.crossed_at))
-              .slice(0, 5);
+            {/* Table */}
+            <div className="p-4">
+              {(() => {
+                const milestonesForType = filteredByDateMilestones
+                  .filter(m => m.milestone_type === selectedMilestone)
+                  .sort((a, b) => {
+                    if (sortConfig.column === 'date') {
+                      const dateA = new Date(a.crossed_at);
+                      const dateB = new Date(b.crossed_at);
+                      return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+                    } else if (sortConfig.column === 'stars') {
+                      return sortConfig.direction === 'asc'
+                        ? a.stars_at_crossing - b.stars_at_crossing
+                        : b.stars_at_crossing - a.stars_at_crossing;
+                    }
+                    return 0;
+                  });
 
-            return (
-              <div
-                key={milestone.type}
-                className="bg-white border border-gray-200 rounded-lg shadow-sm"
-              >
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                  <h3 className="font-semibold text-gray-900">{milestone.label}</h3>
-                </div>
-                <div className="p-4">
-                  {recentForMilestone.length === 0 ? (
-                    <p className="text-xs text-gray-500">No repos yet</p>
-                  ) : (
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-left text-gray-500 text-xs">
-                          <th className="pb-2 font-medium w-8">#</th>
-                          <th className="pb-2 font-medium">Repository</th>
-                          <th className="pb-2 font-medium text-right">Date</th>
+                const handleSort = (column) => {
+                  setSortConfig(prev => ({
+                    column,
+                    direction: prev.column === column && prev.direction === 'desc' ? 'asc' : 'desc'
+                  }));
+                };
+
+                const SortIcon = ({ column }) => (
+                  <span className="ml-1 inline-block">
+                    {sortConfig.column === column ? (
+                      sortConfig.direction === 'desc' ? '↓' : '↑'
+                    ) : (
+                      <span className="text-gray-300">↕</span>
+                    )}
+                  </span>
+                );
+
+                return milestonesForType.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No repos have hit this milestone yet</p>
+                ) : (
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-gray-500 text-xs">
+                        <th className="pb-2 font-medium w-8">#</th>
+                        <th className="pb-2 font-medium">Repository</th>
+                        <th
+                          className="pb-2 font-medium text-right cursor-pointer hover:text-gray-700 select-none"
+                          onClick={() => handleSort('stars')}
+                        >
+                          Stars<SortIcon column="stars" />
+                        </th>
+                        <th
+                          className="pb-2 font-medium text-right cursor-pointer hover:text-gray-700 select-none"
+                          onClick={() => handleSort('date')}
+                        >
+                          Date<SortIcon column="date" />
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {milestonesForType.map((event, index) => (
+                        <tr key={event.id} className="border-t border-gray-100">
+                          <td className="py-1.5 text-gray-400">{index + 1}</td>
+                          <td className="py-1.5">
+                            <a
+                              href={`https://github.com/${event.repositories?.owner}/${event.repositories?.repo}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              {event.repositories?.owner}/{event.repositories?.repo}
+                            </a>
+                          </td>
+                          <td className="py-1.5 text-right text-gray-600">
+                            {event.stars_at_crossing?.toLocaleString()}
+                          </td>
+                          <td className="py-1.5 text-right text-gray-500">
+                            {new Date(event.crossed_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {recentForMilestone.map((event, index) => (
-                          <tr key={event.id} className="border-t border-gray-100">
-                            <td className="py-1.5 text-gray-400">{index + 1}</td>
-                            <td className="py-1.5">
-                              <a
-                                href={`https://github.com/${event.repositories?.owner}/${event.repositories?.repo}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                {event.repositories?.owner}/{event.repositories?.repo}
-                              </a>
-                            </td>
-                            <td className="py-1.5 text-right text-gray-500">
-                              {new Date(event.crossed_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
           </div>
         </div>
       </div>
