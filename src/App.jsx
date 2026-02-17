@@ -117,7 +117,7 @@ function App() {
         } else if (isResuming) {
           setProgress({ status: 'Resuming data fetch...' });
         } else {
-          setProgress({ status: 'Fetching all historical data...' });
+          setProgress({ status: 'Fetching data...' });
         }
       }
       console.log(isResuming ? 'Resuming fetch with state:' : 'Full fetch', resumeState);
@@ -208,7 +208,7 @@ function App() {
       const forksSinceDate = forksStartPage > 1 ? null : sinceDate;
       const prsSinceDate = prsStartPage > 1 ? null : sinceDate;
 
-      setProgress(prev => ({ ...prev, status: 'Fetching all data...' }));
+      setProgress(prev => ({ ...prev, status: 'Fetching data...' }));
 
       // Fetch all data types in parallel for speed, with incremental saving
       const [starsResult, forksResult, issuesResult, prsResult, commitsResult] = await Promise.all([
@@ -225,8 +225,16 @@ function App() {
       console.log(`PRs fetch: ${prsResult.prs.length} PRs, hitLimit: ${prsResult.hitPaginationLimit}, lastPage: ${prsResult.lastPage}`);
       console.log(`Commits fetch: ${commitsResult.commits.length} commits, hitLimit: ${commitsResult.hitPaginationLimit}, lastDate: ${commitsResult.lastDate}`);
       if (!silent) {
-        setProgress(prev => ({ ...prev, commits: { ...prev.commits, done: true, partial: commitsResult.hitPaginationLimit } }));
-        setProgress({ status: 'Processing data...' });
+        // Mark all metrics as done
+        setProgress(prev => ({
+          ...prev,
+          stars: { ...prev.stars, done: true, fetched: starsResult.stargazers.length },
+          forks: { ...prev.forks, done: true, fetched: forksResult.forks.length },
+          issues: { ...prev.issues, done: true, fetched: issuesResult.issues.length },
+          prs: { ...prev.prs, done: true, fetched: prsResult.prs.length },
+          commits: { ...prev.commits, done: true, fetched: commitsResult.commits.length },
+          status: 'Processing data...'
+        }));
       }
 
       let finalData;
@@ -261,6 +269,9 @@ function App() {
       }
 
       if (!silent) {
+        console.log('=== Setting UI Data ===');
+        console.log('finalData length:', finalData.length);
+        console.log('finalData last 3 days:', finalData.slice(-3));
         setDailyData(finalData);
         setProgress({ status: 'Saving to cache...' });
       }
@@ -294,10 +305,13 @@ function App() {
                          prsResult.hitPaginationLimit || issuesResult.hitPaginationLimit ||
                          commitsResult.hitPaginationLimit;
 
+      console.log('Saving to cache with isResuming:', isResuming);
       await saveRepoToCache(owner, repo, finalData, isResuming, fetchState);
+      console.log('Cache save complete');
 
       // Mark fetch as complete
       await updateFetchProgress(owner, repo, { ...fetchState, inProgress: false });
+      console.log('Fetch progress updated');
 
       setDataSource(isResuming ? 'resumed' : 'github');
       setLastFetched(new Date().toISOString());
@@ -654,27 +668,28 @@ function App() {
         </div>
       </div>
 
-      {/* Hamburger menu - fixed top left when sidebar closed */}
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors z-50"
-          title="Show sidebar"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-          </svg>
-        </button>
-      )}
-
       {/* Main Content */}
       <div className="flex-1 min-w-0">
         {/* Top Navigation Bar */}
         <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <Link to="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
-              GitHub Repository Analytics
-            </Link>
+          <div className="flex items-center justify-between w-full">
+            {/* Left section: hamburger menu and title */}
+            <div className="flex items-center gap-4">
+              {!sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  title="Show sidebar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )}
+              <Link to="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                GitHub Repository Analytics
+              </Link>
+            </div>
             <nav className="flex items-center gap-6">
               <Link
                 to="/lookup"
@@ -710,7 +725,7 @@ function App() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className={`${sidebarOpen ? 'max-w-7xl' : 'max-w-[1600px]'} mx-auto px-8 py-8`}>
           <Routes>
             {/* Home - Trending Overview */}
             <Route path="/" element={<HomePage onRepoSelect={handleCachedRepoSelect} />} />

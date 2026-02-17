@@ -6,7 +6,8 @@ export default function LoadingProgress({ progress }) {
     return Math.min(100, Math.round((fetched / total) * 100));
   };
 
-  const formatNumber = (num) => {
+  const formatNumber = (num, showNoneForZero = false) => {
+    if (showNoneForZero && (num === 0 || num === undefined || num === null)) return 'None';
     if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
     return num?.toString() || '0';
   };
@@ -80,15 +81,24 @@ export default function LoadingProgress({ progress }) {
             const isRateLimited = data?.rateLimit;
             const isComplete = total && displayFetched >= total;
 
+            const isDone = data?.done;
+            const hasActivity = fetched > 0 || isRateLimited || isDone;
+
             return (
               <div key={key}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600">{label}</span>
                   <span className="text-gray-500">
-                    {formatNumber(displayFetched)}
-                    {total ? ` / ${formatNumber(total)}` : (isRefresh && fetched > 0 ? ' new' : '')}
-                    {pct !== null && ` (${pct}%)`}
-                    {isComplete && <span className="text-green-500 ml-1">✓</span>}
+                    {isRefresh && isDone && fetched === 0 ? (
+                      <>None</>
+                    ) : (
+                      <>
+                        {formatNumber(displayFetched)}
+                        {total ? ` / ${formatNumber(total)}` : (isRefresh && fetched > 0 ? ' new' : '')}
+                        {pct !== null && ` (${pct}%)`}
+                      </>
+                    )}
+                    {(isComplete || isDone) && <span className="text-green-500 ml-1">✓</span>}
                     {isRateLimited && data?.secondsRemaining && (
                       <span className="text-orange-500 ml-2">
                         Rate limited - {data.secondsRemaining}s
@@ -96,7 +106,8 @@ export default function LoadingProgress({ progress }) {
                     )}
                   </span>
                 </div>
-                {total && total > 0 && (
+                {/* Show progress bar: determinate if we have total, indeterminate otherwise */}
+                {(total && total > 0) ? (
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-300 ${
@@ -104,6 +115,16 @@ export default function LoadingProgress({ progress }) {
                       }`}
                       style={{ width: `${pct || 0}%` }}
                     />
+                  </div>
+                ) : (
+                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    {isDone ? (
+                      <div className="h-2 rounded-full bg-green-500 w-full" />
+                    ) : hasActivity ? (
+                      <div className="h-2 rounded-full bg-blue-500 animate-pulse w-full opacity-60" />
+                    ) : (
+                      <div className="h-2 rounded-full bg-gray-300 w-0" />
+                    )}
                   </div>
                 )}
               </div>

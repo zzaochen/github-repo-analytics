@@ -13,6 +13,13 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
     ? existingBefore[existingBefore.length - 1]
     : null;
 
+  console.log('=== aggregateIncrementalToDaily Debug ===');
+  console.log('sinceDate:', sinceDate, '-> sinceDateStr:', sinceDateStr);
+  console.log('existingMetrics count:', existingMetrics?.length || 0);
+  console.log('existingBefore count:', existingBefore.length);
+  console.log('lastMetric date:', lastMetric?.date, 'totalStars:', lastMetric?.totalStars);
+  console.log('New data counts - stars:', stargazers.length, 'forks:', forks.length, 'issues:', issues.length, 'prs:', prs.length, 'commits:', commits.length);
+
   let totalStars = lastMetric?.totalStars || 0;
   let totalForks = lastMetric?.totalForks || 0;
   let totalContributors = lastMetric?.totalContributors || 0;
@@ -25,17 +32,15 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
   // Track seen contributors from existing data
   const seenContributors = new Set();
 
-  // Create a map for days starting from sinceDate
+  // Create a map for days starting from sinceDate (use UTC to avoid timezone issues)
   const dayMap = new Map();
-  const startDate = new Date(sinceDate);
-  startDate.setHours(0, 0, 0, 0);
-  const endDate = new Date();
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  const currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-    const dateKey = currentDate.toISOString().split('T')[0];
-    dayMap.set(dateKey, {
-      date: dateKey,
+  // Iterate from sinceDateStr to today using string comparison (timezone-safe)
+  let currentDateStr = sinceDateStr;
+  while (currentDateStr <= todayStr) {
+    dayMap.set(currentDateStr, {
+      date: currentDateStr,
       starsAdded: 0,
       forksAdded: 0,
       issuesOpened: 0,
@@ -45,7 +50,10 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
       prsMerged: 0,
       newContributors: new Set()
     });
-    currentDate.setDate(currentDate.getDate() + 1);
+    // Add one day using UTC
+    const nextDate = new Date(currentDateStr + 'T12:00:00Z'); // Use noon to avoid DST edge cases
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    currentDateStr = nextDate.toISOString().split('T')[0];
   }
 
   // Aggregate new stars
@@ -139,6 +147,11 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
   });
 
   // Merge: keep existing data before sinceDate, replace/add new data
+  console.log('newMetrics count:', newMetrics.length);
+  console.log('newMetrics first:', newMetrics[0]?.date, 'totalStars:', newMetrics[0]?.totalStars);
+  console.log('newMetrics last:', newMetrics[newMetrics.length-1]?.date, 'totalStars:', newMetrics[newMetrics.length-1]?.totalStars);
+  console.log('Final result: existingBefore + newMetrics =', existingBefore.length, '+', newMetrics.length, '=', existingBefore.length + newMetrics.length);
+  console.log('=== End Debug ===');
   return [...existingBefore, ...newMetrics];
 }
 

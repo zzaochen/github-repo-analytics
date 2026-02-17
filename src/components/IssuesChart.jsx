@@ -2,7 +2,14 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } f
 import ChartCard from './ChartCard';
 
 export default function IssuesChart({ data }) {
-  const chartData = data.filter((_, i) => i % Math.max(1, Math.floor(data.length / 100)) === 0);
+  // Sample data for performance, but always include the last data point
+  const step = Math.max(1, Math.floor(data.length / 100));
+  const sampledData = data.filter((_, i) => i % step === 0);
+  // Ensure last data point is included
+  if (data.length > 0 && sampledData[sampledData.length - 1] !== data[data.length - 1]) {
+    sampledData.push(data[data.length - 1]);
+  }
+  const chartData = sampledData;
 
   return (
     <ChartCard title="Issues Over Time">
@@ -11,15 +18,21 @@ export default function IssuesChart({ data }) {
           <XAxis
             dataKey="date"
             tick={{ fill: '#6B7280', fontSize: 12 }}
-            tickFormatter={(val) => val.slice(5)}
+            tickFormatter={(val) => {
+              const date = new Date(val);
+              const month = date.toLocaleDateString('en-US', { month: 'short' });
+              const year = date.getFullYear().toString().slice(-2);
+              return `${month}-${year}`;
+            }}
           />
           <YAxis
             tick={{ fill: '#6B7280', fontSize: 12 }}
-            tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
+            tickFormatter={(val) => val.toLocaleString('en-US')}
           />
           <Tooltip
             contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
             labelStyle={{ color: '#374151' }}
+            formatter={(value, name) => [value.toLocaleString('en-US'), name]}
           />
           <Legend />
           <Area

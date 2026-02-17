@@ -86,7 +86,7 @@ export default function RateLimitStatus({ token }) {
               />
             </div>
             <span className={`font-medium ${isDepleted ? 'text-red-600' : isLow ? 'text-yellow-600' : 'text-gray-600'}`}>
-              {rateLimit.remaining}/{rateLimit.limit}
+              {rateLimit.remaining.toLocaleString('en-US')}/{rateLimit.limit.toLocaleString('en-US')}
             </span>
           </div>
 
