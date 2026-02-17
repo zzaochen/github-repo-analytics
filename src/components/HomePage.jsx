@@ -530,45 +530,50 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
                   {/* Date Filter Controls */}
                   <div className="mb-4 pb-3 border-b border-gray-200">
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {[
-                        { key: 'all', label: 'All Time' },
-                        { key: '7d', label: '7 Days' },
-                        { key: '30d', label: '30 Days' },
-                        { key: '90d', label: '90 Days' },
-                        { key: '1y', label: '1 Year' },
-                        { key: 'custom', label: 'Custom' }
-                      ].map(({ key, label }) => (
-                        <button
-                          key={key}
-                          onClick={() => setStatsDateFilter(key)}
-                          className={`px-2 py-1 text-xs rounded transition-colors ${
-                            statsDateFilter === key
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    {statsDateFilter === 'custom' && (
-                      <div className="flex gap-2 mt-2">
-                        <input
-                          type="date"
-                          value={customDateRange.start}
-                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                        <span className="text-gray-400 text-xs self-center">to</span>
-                        <input
-                          type="date"
-                          value={customDateRange.end}
-                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                    <div className="flex items-center justify-end">
+                      <div className="flex">
+                        {[
+                          { key: 'all', label: 'All' },
+                          { key: '7d', label: '7d' },
+                          { key: '30d', label: '30d' },
+                          { key: '90d', label: '90d' },
+                          { key: '1y', label: '1y' },
+                          { key: 'custom', label: 'Custom' }
+                        ].map(({ key, label }, index, arr) => (
+                          <button
+                            key={key}
+                            onClick={() => setStatsDateFilter(key)}
+                            className={`px-1.5 py-0.5 text-[10px] border-y border-r transition-colors ${
+                              index === 0 ? 'border-l rounded-l' : ''
+                            } ${
+                              index === arr.length - 1 ? 'rounded-r' : ''
+                            } ${
+                              statsDateFilter === key
+                                ? 'bg-blue-500 text-white border-blue-500'
+                                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
                       </div>
-                    )}
+                      {statsDateFilter === 'custom' && (
+                        <div className="flex items-center ml-2">
+                          <input
+                            type="date"
+                            value={customDateRange.start}
+                            onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                            className="px-1 py-0.5 text-[10px] border border-gray-300 rounded-l focus:outline-none focus:ring-1 focus:ring-blue-500 w-24"
+                          />
+                          <input
+                            type="date"
+                            value={customDateRange.end}
+                            onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                            className="px-1 py-0.5 text-[10px] border-y border-r border-gray-300 rounded-r focus:outline-none focus:ring-1 focus:ring-blue-500 w-24 -ml-px"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {statsLoading ? (
