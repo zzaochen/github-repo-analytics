@@ -253,6 +253,70 @@ export async function getRecentlyAddedRepos(hoursAgo = 24) {
   }
 }
 
+// Get aggregate stats across all cached repos
+export async function getAggregateStats() {
+  if (!supabase) return null;
+
+  try {
+    // Get total repos count
+    const { count: totalRepos } = await supabase
+      .from('repositories')
+      .select('*', { count: 'exact', head: true });
+
+    // Get the latest metrics for each repo and sum them up
+    // First get all repo IDs
+    const { data: repos } = await supabase
+      .from('repositories')
+      .select('id');
+
+    if (!repos || repos.length === 0) {
+      return {
+        totalRepos: 0,
+        totalCommits: 0,
+        totalPRsOpened: 0,
+        totalPRsMerged: 0,
+        totalPRsClosed: 0,
+        asOf: new Date().toISOString()
+      };
+    }
+
+    // For each repo, get the latest daily_metrics entry
+    let totalCommits = 0;
+    let totalPRsOpened = 0;
+    let totalPRsMerged = 0;
+    let totalPRsClosed = 0;
+
+    for (const repo of repos) {
+      const { data: latestMetric } = await supabase
+        .from('daily_metrics')
+        .select('total_commits, total_prs_opened, total_prs_merged, total_prs_closed')
+        .eq('repo_id', repo.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestMetric) {
+        totalCommits += latestMetric.total_commits || 0;
+        totalPRsOpened += latestMetric.total_prs_opened || 0;
+        totalPRsMerged += latestMetric.total_prs_merged || 0;
+        totalPRsClosed += latestMetric.total_prs_closed || 0;
+      }
+    }
+
+    return {
+      totalRepos: totalRepos || 0,
+      totalCommits,
+      totalPRsOpened,
+      totalPRsMerged,
+      totalPRsClosed,
+      asOf: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error fetching aggregate stats:', error);
+    return null;
+  }
+}
+
 // Delete a repository and its metrics from cache
 export async function deleteRepoFromCache(owner, repo) {
   if (!supabase) return false;

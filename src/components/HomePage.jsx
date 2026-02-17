@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchTrendingRepos } from '../services/trendingScraper';
-import { getCachedRepos, getRecentlyAddedRepos } from '../services/supabase';
+import { getCachedRepos, getRecentlyAddedRepos, getAggregateStats } from '../services/supabase';
 
 const PERIODS = [
   { key: 'daily', label: 'Daily Trending', param: 'daily' },
@@ -54,6 +54,9 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
   // Recently added repos
   const [recentlyAdded, setRecentlyAdded] = useState([]);
 
+  // Aggregate stats
+  const [aggregateStats, setAggregateStats] = useState(null);
+
   useEffect(() => {
     // Check cache first
     const cached = getCache();
@@ -92,6 +95,11 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
   // Load recently added repos (last 48 hours)
   useEffect(() => {
     getRecentlyAddedRepos(48).then(setRecentlyAdded);
+  }, []);
+
+  // Load aggregate stats
+  useEffect(() => {
+    getAggregateStats().then(setAggregateStats);
   }, []);
 
   // Handle click outside dropdown
@@ -370,8 +378,8 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
         })}
       </div>
 
-      {/* Recently Added Repos */}
-      {recentlyAdded.length > 0 && (() => {
+      {/* Recently Added Repos and Stats Summary */}
+      {(recentlyAdded.length > 0 || aggregateStats) && (() => {
         // Create a map of trending repos for quick lookup (combine all periods)
         const trendingMap = new Map();
         ['daily', 'weekly', 'monthly'].forEach(period => {
@@ -406,67 +414,114 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
         });
 
         return (
-          <div className="mt-8 w-1/2">
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                </svg>
-                Recently Added
-              </h2>
-              <p className="text-gray-500 text-sm">New repos added from trending in the last 48 hours</p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                <h3 className="font-semibold text-gray-900">{recentlyAdded.length} New Repos</h3>
+          <div className="mt-8 flex gap-6">
+            {/* Recently Added Table */}
+            {recentlyAdded.length > 0 && (
+              <div className="w-1/2">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                    </svg>
+                    Recently Added
+                  </h2>
+                  <p className="text-gray-500 text-sm">New repos added from trending in the last 48 hours</p>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <h3 className="font-semibold text-gray-900">{recentlyAdded.length} New Repos</h3>
+                  </div>
+                  <div className="p-4 max-h-[400px] overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 text-xs whitespace-nowrap">
+                          <th className="pb-2 font-medium w-6">#</th>
+                          <th className="pb-2 font-medium">Repository</th>
+                          <th className="pb-2 font-medium text-right w-16">Stars</th>
+                          <th className="pb-2 font-medium text-right w-16">New</th>
+                          <th className="pb-2 font-medium text-right w-16">%</th>
+                          <th className="pb-2 font-medium text-right w-16">Added</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedRepos.map((repo, index) => (
+                          <tr key={repo.id} className="border-t border-gray-100 whitespace-nowrap">
+                            <td className="py-1.5 text-gray-400">{index + 1}</td>
+                            <td className="py-1.5">
+                              <a
+                                href={`https://github.com/${repo.fullName}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline truncate block max-w-[140px]"
+                                title={repo.fullName}
+                              >
+                                {repo.fullName}
+                              </a>
+                            </td>
+                            <td className="py-1.5 text-right text-gray-600">
+                              {repo.stars ? formatNumber(repo.stars) : '-'}
+                            </td>
+                            <td className="py-1.5 text-right text-green-600 font-medium">
+                              {repo.starsGained ? `+${formatNumber(repo.starsGained)}` : '-'}
+                            </td>
+                            <td className="py-1.5 text-right text-green-600 font-medium">
+                              {repo.stars && repo.starsGained && repo.stars > repo.starsGained
+                                ? `+${Math.round((repo.starsGained / (repo.stars - repo.starsGained)) * 100).toLocaleString('en-US')}%`
+                                : repo.starsGained ? 'New' : '-'}
+                            </td>
+                            <td className="py-1.5 text-right text-gray-500">
+                              {new Date(repo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-              <div className="p-4 max-h-[400px] overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-gray-500 text-xs whitespace-nowrap">
-                      <th className="pb-2 font-medium w-6">#</th>
-                      <th className="pb-2 font-medium">Repository</th>
-                      <th className="pb-2 font-medium text-right w-16">Stars</th>
-                      <th className="pb-2 font-medium text-right w-16">New</th>
-                      <th className="pb-2 font-medium text-right w-16">%</th>
-                      <th className="pb-2 font-medium text-right w-16">Added</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedRepos.map((repo, index) => (
-                      <tr key={repo.id} className="border-t border-gray-100 whitespace-nowrap">
-                        <td className="py-1.5 text-gray-400">{index + 1}</td>
-                        <td className="py-1.5">
-                          <a
-                            href={`https://github.com/${repo.fullName}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline truncate block max-w-[140px]"
-                            title={repo.fullName}
-                          >
-                            {repo.fullName}
-                          </a>
-                        </td>
-                        <td className="py-1.5 text-right text-gray-600">
-                          {repo.stars ? formatNumber(repo.stars) : '-'}
-                        </td>
-                        <td className="py-1.5 text-right text-green-600 font-medium">
-                          {repo.starsGained ? `+${formatNumber(repo.starsGained)}` : '-'}
-                        </td>
-                        <td className="py-1.5 text-right text-green-600 font-medium">
-                          {repo.stars && repo.starsGained && repo.stars > repo.starsGained
-                            ? `+${Math.round((repo.starsGained / (repo.stars - repo.starsGained)) * 100).toLocaleString('en-US')}%`
-                            : repo.starsGained ? 'New' : '-'}
-                        </td>
-                        <td className="py-1.5 text-right text-gray-500">
-                          {new Date(repo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            )}
+
+            {/* Stats Summary */}
+            {aggregateStats && (
+              <div className="w-1/2">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                    </svg>
+                    Cache Summary
+                  </h2>
+                  <p className="text-gray-500 text-sm">Aggregate stats across all cached repositories</p>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Total Repos Cached</span>
+                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalRepos.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Total Commits (All Repos)</span>
+                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalCommits.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Total PRs Opened (All Repos)</span>
+                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalPRsOpened.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Total PRs Merged (All Repos)</span>
+                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalPRsMerged.toLocaleString('en-US')}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-gray-600">Total PRs Closed (All Repos)</span>
+                      <span className="text-xl font-bold text-gray-900">{aggregateStats.totalPRsClosed.toLocaleString('en-US')}</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-sm italic mt-6">
+                    As of {new Date(aggregateStats.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         );
       })()}
