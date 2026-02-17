@@ -86,8 +86,8 @@ export default function MilestonesView() {
     }
   };
 
-  // Group milestones by repo - each repo appears once with checkmarks for milestones hit
-  const repoMilestones = filteredByDateMilestones.reduce((acc, milestone) => {
+  // Group milestones by repo - each repo appears once with checkmarks for milestones hit (all time)
+  const repoMilestones = milestones.reduce((acc, milestone) => {
     const repoKey = `${milestone.repositories?.owner}/${milestone.repositories?.repo}`;
     if (!acc[repoKey]) {
       acc[repoKey] = {
@@ -161,51 +161,30 @@ export default function MilestonesView() {
       </div>
 
       {/* Filter buttons */}
-      <div className="flex items-center gap-6 mb-6 flex-wrap">
-        {/* Milestone type filters */}
-        <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            filter === 'all'
+              ? 'bg-gray-900 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          All
+        </button>
+        {[...STAR_MILESTONES].reverse().map(milestone => (
           <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'all'
+            key={milestone.type}
+            onClick={() => setFilter(milestone.type)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+              filter === milestone.type
                 ? 'bg-gray-900 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            All
+            {getMilestoneIcon(milestone.type)} {milestone.label}
           </button>
-          {[...STAR_MILESTONES].reverse().map(milestone => (
-            <button
-              key={milestone.type}
-              onClick={() => setFilter(milestone.type)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                filter === milestone.type
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {getMilestoneIcon(milestone.type)} {milestone.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Date filters */}
-        <div className="flex gap-2 items-center">
-          <span className="text-sm text-gray-500">Time:</span>
-          {DATE_FILTERS.map(df => (
-            <button
-              key={df.key}
-              onClick={() => setDateFilter(df.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                dateFilter === df.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {df.label}
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
 
       <div className="flex gap-6">
@@ -278,12 +257,29 @@ export default function MilestonesView() {
         {/* Recent Milestones - Right Side */}
         <div className="w-1/2">
           <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              Recent Achievements
-            </h2>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                Recent Achievements
+              </h2>
+              <div className="flex gap-1">
+                {DATE_FILTERS.map(df => (
+                  <button
+                    key={df.key}
+                    onClick={() => setDateFilter(df.key)}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      dateFilter === df.key
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {df.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <p className="text-gray-500 text-sm">Latest repos to hit star milestones</p>
           </div>
           <div className="space-y-4">
