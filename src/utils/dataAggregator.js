@@ -1,3 +1,145 @@
+// Incremental aggregation: adds new data to existing metrics
+// Used for "Update to Today" operations
+export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargazers, forks, issues, prs, commits) {
+  // Get last known cumulative totals from existing data
+  const lastMetric = existingMetrics && existingMetrics.length > 0
+    ? existingMetrics[existingMetrics.length - 1]
+    : null;
+
+  let totalStars = lastMetric?.totalStars || 0;
+  let totalForks = lastMetric?.totalForks || 0;
+  let totalContributors = lastMetric?.totalContributors || 0;
+  let totalIssuesOpened = lastMetric?.totalIssuesOpened || 0;
+  let totalIssuesClosed = lastMetric?.totalIssuesClosed || 0;
+  let totalPRsOpened = lastMetric?.totalPRsOpened || 0;
+  let totalPRsClosed = lastMetric?.totalPRsClosed || 0;
+  let totalPRsMerged = lastMetric?.totalPRsMerged || 0;
+
+  // Track seen contributors from existing data
+  const seenContributors = new Set();
+
+  // Create a map for days starting from sinceDate
+  const dayMap = new Map();
+  const startDate = new Date(sinceDate);
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date();
+
+  const currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const dateKey = currentDate.toISOString().split('T')[0];
+    dayMap.set(dateKey, {
+      date: dateKey,
+      starsAdded: 0,
+      forksAdded: 0,
+      issuesOpened: 0,
+      issuesClosed: 0,
+      prsOpened: 0,
+      prsClosed: 0,
+      prsMerged: 0,
+      newContributors: new Set()
+    });
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Aggregate new stars
+  stargazers.forEach(s => {
+    const dateKey = s.starredAt.split('T')[0];
+    if (dayMap.has(dateKey)) {
+      dayMap.get(dateKey).starsAdded++;
+    }
+  });
+
+  // Aggregate new forks
+  forks.forEach(f => {
+    const dateKey = f.createdAt.split('T')[0];
+    if (dayMap.has(dateKey)) {
+      dayMap.get(dateKey).forksAdded++;
+    }
+  });
+
+  // Aggregate new issues
+  issues.forEach(i => {
+    const openedDateKey = i.createdAt.split('T')[0];
+    if (dayMap.has(openedDateKey)) {
+      dayMap.get(openedDateKey).issuesOpened++;
+    }
+    if (i.closedAt) {
+      const closedDateKey = i.closedAt.split('T')[0];
+      if (dayMap.has(closedDateKey)) {
+        dayMap.get(closedDateKey).issuesClosed++;
+      }
+    }
+  });
+
+  // Aggregate new PRs
+  prs.forEach(pr => {
+    const openedDateKey = pr.createdAt.split('T')[0];
+    if (dayMap.has(openedDateKey)) {
+      dayMap.get(openedDateKey).prsOpened++;
+    }
+    if (pr.closedAt) {
+      const closedDateKey = pr.closedAt.split('T')[0];
+      if (dayMap.has(closedDateKey)) {
+        dayMap.get(closedDateKey).prsClosed++;
+      }
+    }
+    if (pr.mergedAt) {
+      const mergedDateKey = pr.mergedAt.split('T')[0];
+      if (dayMap.has(mergedDateKey)) {
+        dayMap.get(mergedDateKey).prsMerged++;
+      }
+    }
+  });
+
+  // Track new contributors
+  commits.forEach(c => {
+    if (!c.author) return;
+    const dateKey = c.date.split('T')[0];
+    if (dayMap.has(dateKey) && !seenContributors.has(c.author)) {
+      seenContributors.add(c.author);
+      dayMap.get(dateKey).newContributors.add(c.author);
+    }
+  });
+
+  // Convert to array with cumulative totals continuing from last known values
+  const sortedDays = Array.from(dayMap.values()).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+
+  const newMetrics = sortedDays.map(day => {
+    totalStars += day.starsAdded;
+    totalForks += day.forksAdded;
+    totalContributors += day.newContributors.size;
+    totalIssuesOpened += day.issuesOpened;
+    totalIssuesClosed += day.issuesClosed;
+    totalPRsOpened += day.prsOpened;
+    totalPRsClosed += day.prsClosed;
+    totalPRsMerged += day.prsMerged;
+
+    return {
+      date: day.date,
+      totalStars,
+      totalForks,
+      totalContributors,
+      totalIssuesOpened,
+      totalIssuesClosed,
+      openIssues: totalIssuesOpened - totalIssuesClosed,
+      totalPRsOpened,
+      totalPRsClosed,
+      totalPRsMerged,
+      openPRs: totalPRsOpened - totalPRsClosed
+    };
+  });
+
+  // Merge: keep existing data before sinceDate, replace/add new data
+  const sinceDateStr = sinceDate.split('T')[0];
+  const existingBefore = existingMetrics
+    ? existingMetrics.filter(m => m.date < sinceDateStr)
+    : [];
+
+  return [...existingBefore, ...newMetrics];
+}
+
 export function aggregateToDaily(repoInfo, stargazers, forks, issues, prs, commits) {
   const startDate = new Date(repoInfo.createdAt);
   const endDate = new Date();

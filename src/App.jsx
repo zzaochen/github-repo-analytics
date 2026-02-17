@@ -23,14 +23,13 @@ import {
   getRepoFromCache,
   saveRepoToCache,
   transformCachedMetrics,
-  mergeDailyMetrics,
   deleteRepoFromCache,
   backfillAllMonthlyMetrics,
   getCachedRepos,
   updateFetchProgress,
   getOrCreateRepo
 } from './services/supabase';
-import { aggregateToDaily } from './utils/dataAggregator';
+import { aggregateToDaily, aggregateIncrementalToDaily } from './utils/dataAggregator';
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -229,25 +228,37 @@ function App() {
         setProgress(prev => ({ ...prev, commits: { ...prev.commits, done: true, partial: commitsResult.hitPaginationLimit } }));
         setProgress({ status: 'Processing data...' });
       }
-      const newAggregated = aggregateToDaily(
-        info,
-        starsResult.stargazers,
-        forksResult.forks,
-        issuesResult.issues,
-        prsResult.prs,
-        commitsResult.commits
-      );
 
       let finalData;
       const cached = await getRepoFromCache(owner, repo);
+      const sinceDate = resumeState?.sinceDate;
 
-      if (isResuming && cached && cached.metrics.length > 0) {
-        if (!silent) setProgress({ status: 'Merging with cached data...' });
+      if (sinceDate && cached && cached.metrics.length > 0) {
+        // Incremental update: use the new function that continues from existing totals
+        if (!silent) setProgress({ status: 'Processing incremental data...' });
         const existingData = transformCachedMetrics(cached.metrics);
-        finalData = mergeDailyMetrics(existingData, newAggregated);
-        console.log(`Merged ${existingData.length} cached days with ${newAggregated.length} new days = ${finalData.length} total days`);
+        finalData = aggregateIncrementalToDaily(
+          existingData,
+          sinceDate,
+          starsResult.stargazers,
+          forksResult.forks,
+          issuesResult.issues,
+          prsResult.prs,
+          commitsResult.commits
+        );
+        console.log(`Incremental update: ${existingData.length} existing days + new data since ${sinceDate} = ${finalData.length} total days`);
       } else {
+        // Full fetch: aggregate from scratch
+        const newAggregated = aggregateToDaily(
+          info,
+          starsResult.stargazers,
+          forksResult.forks,
+          issuesResult.issues,
+          prsResult.prs,
+          commitsResult.commits
+        );
         finalData = newAggregated;
+        console.log(`Full fetch: ${finalData.length} days of data`);
       }
 
       if (!silent) {
