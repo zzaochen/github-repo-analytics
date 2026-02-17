@@ -228,6 +228,31 @@ export async function getCachedRepos() {
   }
 }
 
+// Get recently added repos (added in the last N hours)
+export async function getRecentlyAddedRepos(hoursAgo = 24) {
+  if (!supabase) return [];
+
+  try {
+    const since = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('repositories')
+      .select('*')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching recently added repos:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching recently added repos:', error);
+    return [];
+  }
+}
+
 // Delete a repository and its metrics from cache
 export async function deleteRepoFromCache(owner, repo) {
   if (!supabase) return false;
