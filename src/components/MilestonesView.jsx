@@ -166,7 +166,7 @@ export default function MilestonesView() {
       </div>
 
       {/* Milestones Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm w-1/2">
         <div className="p-4">
           {loading ? (
             <div className="flex items-center justify-center py-8">
