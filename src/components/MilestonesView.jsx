@@ -34,13 +34,13 @@ export default function MilestonesView() {
 
   const loadMilestones = async (autoBackfill = false) => {
     setLoading(true);
-    let data = await getMilestoneEvents(100);
+    let data = await getMilestoneEvents(1000); // Increased limit to fetch all milestones
 
     // Auto-backfill if no milestones exist
     if (autoBackfill && (!data || data.length === 0)) {
       console.log('No milestones found, running backfill...');
       await backfillAllMilestones();
-      data = await getMilestoneEvents(100);
+      data = await getMilestoneEvents(1000);
     }
 
     // One-time recalculation of milestone dates from time series data
@@ -49,7 +49,7 @@ export default function MilestonesView() {
       console.log('Recalculating milestone dates from time series data...');
       await recalculateMilestoneDates();
       localStorage.setItem(recalcKey, 'true');
-      data = await getMilestoneEvents(100);
+      data = await getMilestoneEvents(1000);
     }
 
     setMilestones(data);
