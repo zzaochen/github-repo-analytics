@@ -121,23 +121,6 @@ export default function MilestonesView() {
         </button>
       </div>
 
-      {/* Stats summary */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
-        {STAR_MILESTONES.map(milestone => {
-          const count = repoList.filter(repo => repo.milestones[milestone.type]).length;
-          return (
-            <div
-              key={milestone.type}
-              className={`p-4 rounded-lg border ${getMilestoneColor(milestone.type)}`}
-            >
-              <div className="text-2xl mb-1">{getMilestoneIcon(milestone.type)}</div>
-              <div className="text-2xl font-bold">{count}</div>
-              <div className="text-xs opacity-75">{milestone.label}</div>
-            </div>
-          );
-        })}
-      </div>
-
       {/* Filter buttons */}
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
