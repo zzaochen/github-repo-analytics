@@ -1,10 +1,32 @@
 import { useState, useEffect } from 'react';
 import { getMilestoneEvents, backfillAllMilestones, STAR_MILESTONES } from '../services/supabase';
 
+const DATE_FILTERS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'week', label: 'Last Week', days: 7 },
+  { key: 'month', label: 'Last Month', days: 30 },
+  { key: '3months', label: 'Last 3 Months', days: 90 },
+];
+
 export default function MilestonesView() {
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'stars_5k', 'stars_10k', 'stars_25k', etc.
+  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'week', 'month', '3months'
+
+  // Filter milestones by date
+  const getDateFilteredMilestones = (data) => {
+    if (dateFilter === 'all') return data;
+    const filterConfig = DATE_FILTERS.find(f => f.key === dateFilter);
+    if (!filterConfig?.days) return data;
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - filterConfig.days);
+
+    return data.filter(m => new Date(m.crossed_at) >= cutoffDate);
+  };
+
+  const filteredByDateMilestones = getDateFilteredMilestones(milestones);
 
   useEffect(() => {
     loadMilestones(true); // true = auto-backfill if empty
@@ -65,7 +87,7 @@ export default function MilestonesView() {
   };
 
   // Group milestones by repo - each repo appears once with checkmarks for milestones hit
-  const repoMilestones = milestones.reduce((acc, milestone) => {
+  const repoMilestones = filteredByDateMilestones.reduce((acc, milestone) => {
     const repoKey = `${milestone.repositories?.owner}/${milestone.repositories?.repo}`;
     if (!acc[repoKey]) {
       acc[repoKey] = {
@@ -139,30 +161,51 @@ export default function MilestonesView() {
       </div>
 
       {/* Filter buttons */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            filter === 'all'
-              ? 'bg-gray-900 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          All
-        </button>
-        {[...STAR_MILESTONES].reverse().map(milestone => (
+      <div className="flex items-center gap-6 mb-6 flex-wrap">
+        {/* Milestone type filters */}
+        <div className="flex gap-2 flex-wrap">
           <button
-            key={milestone.type}
-            onClick={() => setFilter(milestone.type)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-              filter === milestone.type
+            onClick={() => setFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filter === 'all'
                 ? 'bg-gray-900 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {getMilestoneIcon(milestone.type)} {milestone.label}
+            All
           </button>
-        ))}
+          {[...STAR_MILESTONES].reverse().map(milestone => (
+            <button
+              key={milestone.type}
+              onClick={() => setFilter(milestone.type)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                filter === milestone.type
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {getMilestoneIcon(milestone.type)} {milestone.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Date filters */}
+        <div className="flex gap-2 items-center">
+          <span className="text-sm text-gray-500">Time:</span>
+          {DATE_FILTERS.map(df => (
+            <button
+              key={df.key}
+              onClick={() => setDateFilter(df.key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                dateFilter === df.key
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {df.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex gap-6">
@@ -245,7 +288,7 @@ export default function MilestonesView() {
           </div>
           <div className="space-y-4">
           {[...STAR_MILESTONES].reverse().map(milestone => {
-            const recentForMilestone = milestones
+            const recentForMilestone = filteredByDateMilestones
               .filter(m => m.milestone_type === milestone.type)
               .sort((a, b) => new Date(b.crossed_at) - new Date(a.crossed_at))
               .slice(0, 5);
