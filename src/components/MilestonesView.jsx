@@ -362,7 +362,7 @@ export default function MilestonesView() {
                           className="pb-2 font-medium text-right cursor-pointer hover:text-gray-700 select-none"
                           onClick={() => handleSort('date')}
                         >
-                          Milestone Achievement Date<SortIcon column="date" />
+                          Milestone Date<SortIcon column="date" />
                         </th>
                       </tr>
                     </thead>
