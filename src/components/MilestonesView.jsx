@@ -246,9 +246,8 @@ export default function MilestonesView() {
                 key={milestone.type}
                 className="bg-white border border-gray-200 rounded-lg shadow-sm"
               >
-                <div className={`px-4 py-2 border-b border-gray-200 rounded-t-lg flex items-center gap-2 ${getMilestoneColor(milestone.type)}`}>
-                  <span>{getMilestoneIcon(milestone.type)}</span>
-                  <span className="font-semibold text-sm">{milestone.label}</span>
+                <div className="px-4 py-2 border-b border-gray-200 rounded-t-lg">
+                  <span className="font-semibold text-sm text-gray-700">{milestone.label}</span>
                 </div>
                 <div className="p-4">
                   {recentForMilestone.length === 0 ? (
