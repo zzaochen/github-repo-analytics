@@ -423,25 +423,26 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
               <div className="p-4 max-h-[400px] overflow-y-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="text-left text-gray-500 text-xs">
+                    <tr className="text-left text-gray-500 text-xs whitespace-nowrap">
                       <th className="pb-2 font-medium w-6">#</th>
                       <th className="pb-2 font-medium">Repository</th>
-                      <th className="pb-2 font-medium text-right w-14">Stars</th>
-                      <th className="pb-2 font-medium text-right w-14">New</th>
-                      <th className="pb-2 font-medium text-right w-14">%</th>
-                      <th className="pb-2 font-medium text-right">Added</th>
+                      <th className="pb-2 font-medium text-right w-12">Stars</th>
+                      <th className="pb-2 font-medium text-right w-12">New</th>
+                      <th className="pb-2 font-medium text-right w-12">%</th>
+                      <th className="pb-2 font-medium text-right w-20">Added</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedRepos.map((repo, index) => (
-                      <tr key={repo.id} className="border-t border-gray-100">
+                      <tr key={repo.id} className="border-t border-gray-100 whitespace-nowrap">
                         <td className="py-1.5 text-gray-400">{index + 1}</td>
                         <td className="py-1.5">
                           <a
                             href={`https://github.com/${repo.fullName}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className="text-blue-600 hover:underline truncate block max-w-[140px]"
+                            title={repo.fullName}
                           >
                             {repo.fullName}
                           </a>
@@ -458,7 +459,7 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                             : repo.starsGained ? 'New' : '-'}
                         </td>
                         <td className="py-1.5 text-right text-gray-500">
-                          {new Date(repo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(repo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </td>
                       </tr>
                     ))}
