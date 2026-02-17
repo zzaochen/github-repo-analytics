@@ -300,6 +300,7 @@ export default function MilestonesView() {
               </div>
             );
           })}
+          </div>
         </div>
       </div>
     </div>
