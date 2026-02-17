@@ -176,7 +176,12 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
       {/* Repo Search */}
       {cachedRepos.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-12 shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">Repo Search</h2>
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2 flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+            Repo Search
+          </h2>
           <p className="text-gray-500 text-sm text-center mb-4">
             Look up a specific repo or if not cached, run a{' '}
             <button
