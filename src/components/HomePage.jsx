@@ -426,10 +426,10 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                     <tr className="text-left text-gray-500 text-xs whitespace-nowrap">
                       <th className="pb-2 font-medium w-6">#</th>
                       <th className="pb-2 font-medium">Repository</th>
-                      <th className="pb-2 font-medium text-right w-12">Stars</th>
-                      <th className="pb-2 font-medium text-right w-12">New</th>
-                      <th className="pb-2 font-medium text-right w-12">%</th>
-                      <th className="pb-2 font-medium text-right w-20">Added</th>
+                      <th className="pb-2 font-medium text-right w-14">Stars</th>
+                      <th className="pb-2 font-medium text-right w-14">New</th>
+                      <th className="pb-2 font-medium text-right w-14">%</th>
+                      <th className="pb-2 font-medium text-right w-14">Added</th>
                     </tr>
                   </thead>
                   <tbody>
