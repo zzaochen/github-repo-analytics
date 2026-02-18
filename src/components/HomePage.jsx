@@ -436,15 +436,9 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
           };
         });
 
-        // Sort using the same logic as trending tables
+        // Sort by date added (most recent first)
         const sortedRepos = [...enrichedRepos].sort((a, b) => {
-          if (sortBy === 'starsGained') return b.starsGained - a.starsGained;
-          if (sortBy === 'percentChange') {
-            const pctA = a.stars > a.starsGained ? (a.starsGained / (a.stars - a.starsGained)) * 100 : Infinity;
-            const pctB = b.stars > b.starsGained ? (b.starsGained / (b.stars - b.starsGained)) * 100 : Infinity;
-            return pctB - pctA;
-          }
-          return b.stars - a.stars;
+          return new Date(b.created_at) - new Date(a.created_at);
         });
 
         return (
