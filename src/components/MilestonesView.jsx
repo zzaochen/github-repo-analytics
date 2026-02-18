@@ -291,20 +291,26 @@ export default function MilestonesView() {
               </div>
             </div>
             {/* Date filter toggles */}
-            <div className="px-4 py-2 border-b border-gray-100 flex gap-1">
-              {DATE_FILTERS.map(df => (
-                <button
-                  key={df.key}
-                  onClick={() => setDateFilter(df.key)}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                    dateFilter === df.key
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {df.label}
-                </button>
-              ))}
+            <div className="px-4 py-2 border-b border-gray-100 flex justify-end">
+              <div className="flex">
+                {DATE_FILTERS.map((df, index, arr) => (
+                  <button
+                    key={df.key}
+                    onClick={() => setDateFilter(df.key)}
+                    className={`px-2 py-1 text-xs font-medium transition-colors border-y border-r ${
+                      index === 0 ? 'border-l rounded-l' : ''
+                    } ${
+                      index === arr.length - 1 ? 'rounded-r' : ''
+                    } ${
+                      dateFilter === df.key
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {df.label}
+                  </button>
+                ))}
+              </div>
             </div>
             {/* Table */}
             <div className="p-4">
