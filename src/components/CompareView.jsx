@@ -1083,6 +1083,718 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
   );
 }
 
+// PRs Opened / Closed Ratio static chart component
+function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
+  const [datePreset, setDatePreset] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [viewMode, setViewMode] = useState('date');
+
+  const formatRatio = (num) => {
+    if (num === null || num === undefined || !isFinite(num) || num === 0) return '--';
+    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatDayIndex = (index) => {
+    const months = Math.floor(index / 30);
+    return `${months}mo`;
+  };
+
+  const getDateRange = () => {
+    const today = new Date();
+    let start = null;
+    let end = today.toISOString().split('T')[0];
+
+    switch (datePreset) {
+      case '1w':
+        start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7).toISOString().split('T')[0];
+        break;
+      case '1m':
+        start = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '3m':
+        start = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '6m':
+        start = new Date(today.getFullYear(), today.getMonth() - 6, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '1y':
+        start = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()).toISOString().split('T')[0];
+        break;
+      case 'custom':
+        start = customStartDate || null;
+        end = customEndDate || today.toISOString().split('T')[0];
+        break;
+      case 'all':
+      default:
+        start = null;
+        end = null;
+        break;
+    }
+
+    return { start, end };
+  };
+
+  const getFilteredRepoData = () => {
+    const { start, end } = getDateRange();
+    const filtered = {};
+
+    selectedRepos.forEach(repoKey => {
+      const data = repoData[repoKey] || [];
+      if (!start && !end) {
+        filtered[repoKey] = data;
+      } else {
+        filtered[repoKey] = data.filter(item => {
+          if (start && item.date < start) return false;
+          if (end && item.date > end) return false;
+          return true;
+        });
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredData = getFilteredRepoData();
+
+  const getComparisonData = () => {
+    if (selectedRepos.length === 0) return [];
+
+    if (viewMode === 'indexed') {
+      let maxLength = 0;
+      selectedRepos.forEach(repoKey => {
+        const data = filteredData[repoKey] || [];
+        if (data.length > maxLength) maxLength = data.length;
+      });
+
+      const indexedData = [];
+      for (let i = 0; i < maxLength; i++) {
+        const point = { dayIndex: i };
+        selectedRepos.forEach(repoKey => {
+          const data = filteredData[repoKey] || [];
+          if (i < data.length) {
+            const opened = data[i].totalPRsOpened || 0;
+            const closed = data[i].totalPRsClosed || 0;
+            point[repoKey] = closed > 0 ? opened / closed : null;
+          }
+        });
+        indexedData.push(point);
+      }
+      return indexedData;
+    } else {
+      const allDates = new Set();
+      selectedRepos.forEach(repoKey => {
+        const data = filteredData[repoKey] || [];
+        data.forEach(d => allDates.add(d.date));
+      });
+
+      const sortedDates = Array.from(allDates).sort();
+
+      return sortedDates.map(date => {
+        const point = {
+          date,
+          timestamp: new Date(date).getTime()
+        };
+        selectedRepos.forEach(repoKey => {
+          const data = filteredData[repoKey] || [];
+          const dayData = data.find(d => d.date === date);
+          if (dayData) {
+            const opened = dayData.totalPRsOpened || 0;
+            const closed = dayData.totalPRsClosed || 0;
+            point[repoKey] = closed > 0 ? opened / closed : null;
+          }
+        });
+        return point;
+      });
+    }
+  };
+
+  const comparisonData = getComparisonData();
+
+  const getYAxisDomain = () => {
+    if (comparisonData.length === 0) return [0, 'auto'];
+
+    let min = Infinity;
+    let max = -Infinity;
+
+    comparisonData.forEach(point => {
+      selectedRepos.forEach(repoKey => {
+        const value = point[repoKey];
+        if (value !== undefined && value !== null && isFinite(value)) {
+          if (value < min) min = value;
+          if (value > max) max = value;
+        }
+      });
+    });
+
+    if (min === Infinity || max === -Infinity) return [0, 'auto'];
+
+    const range = max - min || 1;
+    const roughInterval = range / 5;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughInterval)));
+    const residual = roughInterval / magnitude;
+
+    let niceInterval;
+    if (residual <= 1) niceInterval = magnitude;
+    else if (residual <= 2) niceInterval = 2 * magnitude;
+    else if (residual <= 5) niceInterval = 5 * magnitude;
+    else niceInterval = 10 * magnitude;
+
+    const domainMin = Math.max(0, Math.floor(min / niceInterval) * niceInterval);
+    const domainMax = Math.ceil(max / niceInterval) * niceInterval;
+
+    return [domainMin, domainMax];
+  };
+
+  const getXAxisDomain = () => {
+    if (comparisonData.length === 0) return [0, 1];
+
+    if (viewMode === 'indexed') {
+      return [0, comparisonData.length - 1];
+    }
+
+    const timestamps = comparisonData.map(d => d.timestamp);
+    return [Math.min(...timestamps), Math.max(...timestamps)];
+  };
+
+  const getXAxisTicks = () => {
+    if (comparisonData.length === 0) return [];
+
+    const [domainMin, domainMax] = getXAxisDomain();
+
+    if (viewMode === 'indexed') {
+      const maxDays = domainMax;
+      const totalMonths = Math.ceil(maxDays / 30);
+
+      let increment = 3;
+      while (Math.floor(totalMonths / increment) + 1 > 8) {
+        increment += 3;
+      }
+
+      const ticks = [];
+      for (let month = 0; month * 30 <= maxDays; month += increment) {
+        const tickValue = month * 30;
+        if (tickValue >= domainMin) {
+          ticks.push(tickValue);
+        }
+      }
+      return ticks;
+    } else {
+      const startDate = new Date(domainMin);
+      const endDate = new Date(domainMax);
+
+      const totalMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12
+        + (endDate.getMonth() - startDate.getMonth());
+
+      let monthIncrement = 1;
+      if (totalMonths > 24) monthIncrement = 6;
+      else if (totalMonths > 12) monthIncrement = 3;
+      else if (totalMonths > 6) monthIncrement = 2;
+
+      const ticks = [];
+      const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+      while (current.getTime() < domainMin) {
+        current.setMonth(current.getMonth() + monthIncrement);
+      }
+
+      while (current.getTime() <= domainMax) {
+        ticks.push(current.getTime());
+        current.setMonth(current.getMonth() + monthIncrement);
+      }
+
+      return ticks;
+    }
+  };
+
+  if (comparisonData.length === 0) return null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mt-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">PRs Opened / Closed Ratio</h3>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            {DATE_PRESETS.map(preset => (
+              <button
+                key={preset.key}
+                onClick={() => setDatePreset(preset.key)}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  datePreset === preset.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          {datePreset === 'custom' && (
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-1.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-gray-400 text-xs">to</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-1.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('date')}
+              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                viewMode === 'date'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Date
+            </button>
+            <button
+              onClick={() => setViewMode('indexed')}
+              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                viewMode === 'indexed'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Indexed
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ height: 400 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={comparisonData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+            <XAxis
+              dataKey={viewMode === 'indexed' ? 'dayIndex' : 'timestamp'}
+              type="number"
+              domain={getXAxisDomain()}
+              tickFormatter={viewMode === 'indexed' ? formatDayIndex : (ts) => formatDate(new Date(ts).toISOString())}
+              tick={{ fill: '#6B7280', fontSize: 11 }}
+              ticks={getXAxisTicks()}
+            />
+            <YAxis
+              domain={getYAxisDomain()}
+              tickCount={6}
+              tickFormatter={formatRatio}
+              tick={{ fill: '#6B7280', fontSize: 12 }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px'
+              }}
+              labelFormatter={(label) => {
+                if (viewMode === 'indexed') {
+                  const months = Math.floor(label / 30);
+                  const days = label % 30;
+                  if (months === 0) return `Day ${label}`;
+                  if (days === 0) return `${months} month${months > 1 ? 's' : ''}`;
+                  return `${months} month${months > 1 ? 's' : ''}, ${days} day${days > 1 ? 's' : ''}`;
+                }
+                return new Date(label).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+              }}
+              formatter={(value, name) => [formatRatio(value), name]}
+            />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            {selectedRepos.map((repoKey, index) => (
+              <Line
+                key={repoKey}
+                type="monotone"
+                dataKey={repoKey}
+                name={repoKey}
+                stroke={COLORS[index % COLORS.length]}
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// PRs Opened / Merged Ratio static chart component
+function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
+  const [datePreset, setDatePreset] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [viewMode, setViewMode] = useState('date');
+
+  const formatRatio = (num) => {
+    if (num === null || num === undefined || !isFinite(num) || num === 0) return '--';
+    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatDayIndex = (index) => {
+    const months = Math.floor(index / 30);
+    return `${months}mo`;
+  };
+
+  const getDateRange = () => {
+    const today = new Date();
+    let start = null;
+    let end = today.toISOString().split('T')[0];
+
+    switch (datePreset) {
+      case '1w':
+        start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7).toISOString().split('T')[0];
+        break;
+      case '1m':
+        start = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '3m':
+        start = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '6m':
+        start = new Date(today.getFullYear(), today.getMonth() - 6, today.getDate()).toISOString().split('T')[0];
+        break;
+      case '1y':
+        start = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()).toISOString().split('T')[0];
+        break;
+      case 'custom':
+        start = customStartDate || null;
+        end = customEndDate || today.toISOString().split('T')[0];
+        break;
+      case 'all':
+      default:
+        start = null;
+        end = null;
+        break;
+    }
+
+    return { start, end };
+  };
+
+  const getFilteredRepoData = () => {
+    const { start, end } = getDateRange();
+    const filtered = {};
+
+    selectedRepos.forEach(repoKey => {
+      const data = repoData[repoKey] || [];
+      if (!start && !end) {
+        filtered[repoKey] = data;
+      } else {
+        filtered[repoKey] = data.filter(item => {
+          if (start && item.date < start) return false;
+          if (end && item.date > end) return false;
+          return true;
+        });
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredData = getFilteredRepoData();
+
+  const getComparisonData = () => {
+    if (selectedRepos.length === 0) return [];
+
+    if (viewMode === 'indexed') {
+      let maxLength = 0;
+      selectedRepos.forEach(repoKey => {
+        const data = filteredData[repoKey] || [];
+        if (data.length > maxLength) maxLength = data.length;
+      });
+
+      const indexedData = [];
+      for (let i = 0; i < maxLength; i++) {
+        const point = { dayIndex: i };
+        selectedRepos.forEach(repoKey => {
+          const data = filteredData[repoKey] || [];
+          if (i < data.length) {
+            const opened = data[i].totalPRsOpened || 0;
+            const merged = data[i].totalPRsMerged || 0;
+            point[repoKey] = merged > 0 ? opened / merged : null;
+          }
+        });
+        indexedData.push(point);
+      }
+      return indexedData;
+    } else {
+      const allDates = new Set();
+      selectedRepos.forEach(repoKey => {
+        const data = filteredData[repoKey] || [];
+        data.forEach(d => allDates.add(d.date));
+      });
+
+      const sortedDates = Array.from(allDates).sort();
+
+      return sortedDates.map(date => {
+        const point = {
+          date,
+          timestamp: new Date(date).getTime()
+        };
+        selectedRepos.forEach(repoKey => {
+          const data = filteredData[repoKey] || [];
+          const dayData = data.find(d => d.date === date);
+          if (dayData) {
+            const opened = dayData.totalPRsOpened || 0;
+            const merged = dayData.totalPRsMerged || 0;
+            point[repoKey] = merged > 0 ? opened / merged : null;
+          }
+        });
+        return point;
+      });
+    }
+  };
+
+  const comparisonData = getComparisonData();
+
+  const getYAxisDomain = () => {
+    if (comparisonData.length === 0) return [0, 'auto'];
+
+    let min = Infinity;
+    let max = -Infinity;
+
+    comparisonData.forEach(point => {
+      selectedRepos.forEach(repoKey => {
+        const value = point[repoKey];
+        if (value !== undefined && value !== null && isFinite(value)) {
+          if (value < min) min = value;
+          if (value > max) max = value;
+        }
+      });
+    });
+
+    if (min === Infinity || max === -Infinity) return [0, 'auto'];
+
+    const range = max - min || 1;
+    const roughInterval = range / 5;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughInterval)));
+    const residual = roughInterval / magnitude;
+
+    let niceInterval;
+    if (residual <= 1) niceInterval = magnitude;
+    else if (residual <= 2) niceInterval = 2 * magnitude;
+    else if (residual <= 5) niceInterval = 5 * magnitude;
+    else niceInterval = 10 * magnitude;
+
+    const domainMin = Math.max(0, Math.floor(min / niceInterval) * niceInterval);
+    const domainMax = Math.ceil(max / niceInterval) * niceInterval;
+
+    return [domainMin, domainMax];
+  };
+
+  const getXAxisDomain = () => {
+    if (comparisonData.length === 0) return [0, 1];
+
+    if (viewMode === 'indexed') {
+      return [0, comparisonData.length - 1];
+    }
+
+    const timestamps = comparisonData.map(d => d.timestamp);
+    return [Math.min(...timestamps), Math.max(...timestamps)];
+  };
+
+  const getXAxisTicks = () => {
+    if (comparisonData.length === 0) return [];
+
+    const [domainMin, domainMax] = getXAxisDomain();
+
+    if (viewMode === 'indexed') {
+      const maxDays = domainMax;
+      const totalMonths = Math.ceil(maxDays / 30);
+
+      let increment = 3;
+      while (Math.floor(totalMonths / increment) + 1 > 8) {
+        increment += 3;
+      }
+
+      const ticks = [];
+      for (let month = 0; month * 30 <= maxDays; month += increment) {
+        const tickValue = month * 30;
+        if (tickValue >= domainMin) {
+          ticks.push(tickValue);
+        }
+      }
+      return ticks;
+    } else {
+      const startDate = new Date(domainMin);
+      const endDate = new Date(domainMax);
+
+      const totalMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12
+        + (endDate.getMonth() - startDate.getMonth());
+
+      let monthIncrement = 1;
+      if (totalMonths > 24) monthIncrement = 6;
+      else if (totalMonths > 12) monthIncrement = 3;
+      else if (totalMonths > 6) monthIncrement = 2;
+
+      const ticks = [];
+      const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+      while (current.getTime() < domainMin) {
+        current.setMonth(current.getMonth() + monthIncrement);
+      }
+
+      while (current.getTime() <= domainMax) {
+        ticks.push(current.getTime());
+        current.setMonth(current.getMonth() + monthIncrement);
+      }
+
+      return ticks;
+    }
+  };
+
+  if (comparisonData.length === 0) return null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mt-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">PRs Opened / Merged Ratio</h3>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            {DATE_PRESETS.map(preset => (
+              <button
+                key={preset.key}
+                onClick={() => setDatePreset(preset.key)}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  datePreset === preset.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          {datePreset === 'custom' && (
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-1.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-gray-400 text-xs">to</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-1.5 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('date')}
+              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                viewMode === 'date'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Date
+            </button>
+            <button
+              onClick={() => setViewMode('indexed')}
+              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                viewMode === 'indexed'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Indexed
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ height: 400 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={comparisonData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+            <XAxis
+              dataKey={viewMode === 'indexed' ? 'dayIndex' : 'timestamp'}
+              type="number"
+              domain={getXAxisDomain()}
+              tickFormatter={viewMode === 'indexed' ? formatDayIndex : (ts) => formatDate(new Date(ts).toISOString())}
+              tick={{ fill: '#6B7280', fontSize: 11 }}
+              ticks={getXAxisTicks()}
+            />
+            <YAxis
+              domain={getYAxisDomain()}
+              tickCount={6}
+              tickFormatter={formatRatio}
+              tick={{ fill: '#6B7280', fontSize: 12 }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px'
+              }}
+              labelFormatter={(label) => {
+                if (viewMode === 'indexed') {
+                  const months = Math.floor(label / 30);
+                  const days = label % 30;
+                  if (months === 0) return `Day ${label}`;
+                  if (days === 0) return `${months} month${months > 1 ? 's' : ''}`;
+                  return `${months} month${months > 1 ? 's' : ''}, ${days} day${days > 1 ? 's' : ''}`;
+                }
+                return new Date(label).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+              }}
+              formatter={(value, name) => [formatRatio(value), name]}
+            />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            {selectedRepos.map((repoKey, index) => (
+              <Line
+                key={repoKey}
+                type="monotone"
+                dataKey={repoKey}
+                name={repoKey}
+                stroke={COLORS[index % COLORS.length]}
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 const METRICS = [
   { key: 'totalStars', label: 'Stars' },
   { key: 'totalForks', label: 'Forks' },
@@ -1837,6 +2549,18 @@ export default function CompareView() {
 
           {/* Issues Opened / Closed Ratio Chart */}
           <IssuesRatioChart
+            selectedRepos={selectedRepos}
+            repoData={repoData}
+          />
+
+          {/* PRs Opened / Closed Ratio Chart */}
+          <PRsOpenedClosedRatioChart
+            selectedRepos={selectedRepos}
+            repoData={repoData}
+          />
+
+          {/* PRs Opened / Merged Ratio Chart */}
+          <PRsOpenedMergedRatioChart
             selectedRepos={selectedRepos}
             repoData={repoData}
           />
