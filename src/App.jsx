@@ -7,7 +7,6 @@ import TokenSettings from './components/TokenSettings';
 import CompareView from './components/CompareView';
 import TrendingView from './components/TrendingView';
 import MilestonesView from './components/MilestonesView';
-import RepoDiscovery from './components/RepoDiscovery';
 import HomePage from './components/HomePage';
 import BatchFetch from './components/BatchFetch';
 import RateLimitStatus from './components/RateLimitStatus';
@@ -816,16 +815,6 @@ function App() {
               >
                 Repo Milestones
               </Link>
-              <Link
-                to="/discovery"
-                className={`text-sm font-medium transition-colors ${
-                  location.pathname === '/discovery'
-                    ? 'text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Repo Discovery
-              </Link>
 
               {/* Auth Button */}
               {user ? (
@@ -915,9 +904,6 @@ function App() {
 
             {/* Milestones View */}
             <Route path="/milestones" element={<MilestonesView />} />
-
-            {/* Repo Discovery View */}
-            <Route path="/discovery" element={<RepoDiscovery />} />
           </Routes>
         </div>
       </div>
