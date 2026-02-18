@@ -60,9 +60,6 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
   const [statsLoading, setStatsLoading] = useState(false);
 
-  // Repos added in last 24 hours (for cron visibility)
-  const [last24hRepos, setLast24hRepos] = useState([]);
-
   useEffect(() => {
     // Check cache first
     const cached = getCache();
@@ -101,11 +98,6 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
   // Load recently added repos (last 48 hours)
   useEffect(() => {
     getRecentlyAddedRepos(48).then(setRecentlyAdded);
-  }, []);
-
-  // Load repos added in last 24 hours (cron activity)
-  useEffect(() => {
-    getRecentlyAddedRepos(24).then(setLast24hRepos);
   }, []);
 
   // Load aggregate stats with date filter
@@ -637,43 +629,6 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                         )}
                       </p>
                     </>
-                  )}
-                </div>
-
-                {/* New repos cached in last 24h */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                    </svg>
-                    New Repos (Last 24h)
-                  </h3>
-                  {last24hRepos.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No new repos cached in the last 24 hours</p>
-                  ) : (
-                    <div className="max-h-32 overflow-y-auto">
-                      <table className="w-full text-xs">
-                        <tbody>
-                          {last24hRepos.map((repo) => (
-                            <tr key={repo.id} className="border-t border-gray-100 first:border-t-0">
-                              <td className="py-1">
-                                <a
-                                  href={`https://github.com/${repo.owner}/${repo.repo}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline"
-                                >
-                                  {repo.owner}/{repo.repo}
-                                </a>
-                              </td>
-                              <td className="py-1 text-right text-gray-400">
-                                {new Date(repo.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
                   )}
                 </div>
               </div>
