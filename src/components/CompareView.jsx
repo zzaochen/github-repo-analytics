@@ -1465,7 +1465,7 @@ export default function CompareView() {
       {/* Static Charts Section */}
       {selectedRepos.length > 0 && comparisonData.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Additional Metrics</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Ratio Metrics</h2>
 
           {/* Stars to Forks Ratio Chart */}
           <StarsForksRatioChart
