@@ -108,10 +108,10 @@ CREATE POLICY "Authenticated delete" ON milestone_events
   FOR DELETE
   USING (auth.role() = 'authenticated');
 
--- Cron logs: authenticated users can insert, update, delete
-CREATE POLICY "Authenticated insert" ON cron_logs
+-- Cron logs: allow public inserts (for serverless cron jobs), authenticated for update/delete
+CREATE POLICY "Public insert" ON cron_logs
   FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
 
 CREATE POLICY "Authenticated update" ON cron_logs
   FOR UPDATE
