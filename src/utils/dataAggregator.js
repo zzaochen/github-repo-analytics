@@ -23,6 +23,7 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
   let totalStars = lastMetric?.totalStars || 0;
   let totalForks = lastMetric?.totalForks || 0;
   let totalContributors = lastMetric?.totalContributors || 0;
+  let totalCommits = lastMetric?.totalCommits || 0;
   let totalIssuesOpened = lastMetric?.totalIssuesOpened || 0;
   let totalIssuesClosed = lastMetric?.totalIssuesClosed || 0;
   let totalPRsOpened = lastMetric?.totalPRsOpened || 0;
@@ -43,6 +44,7 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
       date: currentDateStr,
       starsAdded: 0,
       forksAdded: 0,
+      commitsAdded: 0,
       issuesOpened: 0,
       issuesClosed: 0,
       prsOpened: 0,
@@ -106,13 +108,15 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
     }
   });
 
-  // Track new contributors
+  // Track commits and new contributors
   commits.forEach(c => {
-    if (!c.author) return;
     const dateKey = c.date.split('T')[0];
-    if (dayMap.has(dateKey) && !seenContributors.has(c.author)) {
-      seenContributors.add(c.author);
-      dayMap.get(dateKey).newContributors.add(c.author);
+    if (dayMap.has(dateKey)) {
+      dayMap.get(dateKey).commitsAdded++;
+      if (c.author && !seenContributors.has(c.author)) {
+        seenContributors.add(c.author);
+        dayMap.get(dateKey).newContributors.add(c.author);
+      }
     }
   });
 
@@ -125,6 +129,7 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
     totalStars += day.starsAdded;
     totalForks += day.forksAdded;
     totalContributors += day.newContributors.size;
+    totalCommits += day.commitsAdded;
     totalIssuesOpened += day.issuesOpened;
     totalIssuesClosed += day.issuesClosed;
     totalPRsOpened += day.prsOpened;
@@ -136,6 +141,7 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
       totalStars,
       totalForks,
       totalContributors,
+      totalCommits,
       totalIssuesOpened,
       totalIssuesClosed,
       openIssues: totalIssuesOpened - totalIssuesClosed,
@@ -172,6 +178,7 @@ export function aggregateToDaily(repoInfo, stargazers, forks, issues, prs, commi
       date: dateKey,
       starsAdded: 0,
       forksAdded: 0,
+      commitsAdded: 0,
       issuesOpened: 0,
       issuesClosed: 0,
       prsOpened: 0,
@@ -235,14 +242,16 @@ export function aggregateToDaily(repoInfo, stargazers, forks, issues, prs, commi
     }
   });
 
-  // Track unique contributors over time
+  // Track commits and unique contributors over time
   const seenContributors = new Set();
   commits.forEach(c => {
-    if (!c.author) return;
     const dateKey = c.date.split('T')[0];
-    if (dayMap.has(dateKey) && !seenContributors.has(c.author)) {
-      seenContributors.add(c.author);
-      dayMap.get(dateKey).newContributors.add(c.author);
+    if (dayMap.has(dateKey)) {
+      dayMap.get(dateKey).commitsAdded++;
+      if (c.author && !seenContributors.has(c.author)) {
+        seenContributors.add(c.author);
+        dayMap.get(dateKey).newContributors.add(c.author);
+      }
     }
   });
 
@@ -254,6 +263,7 @@ export function aggregateToDaily(repoInfo, stargazers, forks, issues, prs, commi
   let totalStars = 0;
   let totalForks = 0;
   let totalContributors = 0;
+  let totalCommits = 0;
   let totalIssuesOpened = 0;
   let totalIssuesClosed = 0;
   let totalPRsOpened = 0;
@@ -264,6 +274,7 @@ export function aggregateToDaily(repoInfo, stargazers, forks, issues, prs, commi
     totalStars += day.starsAdded;
     totalForks += day.forksAdded;
     totalContributors += day.newContributors.size;
+    totalCommits += day.commitsAdded;
     totalIssuesOpened += day.issuesOpened;
     totalIssuesClosed += day.issuesClosed;
     totalPRsOpened += day.prsOpened;
@@ -275,6 +286,7 @@ export function aggregateToDaily(repoInfo, stargazers, forks, issues, prs, commi
       totalStars,
       totalForks,
       totalContributors,
+      totalCommits,
       totalIssuesOpened,
       totalIssuesClosed,
       openIssues: totalIssuesOpened - totalIssuesClosed,

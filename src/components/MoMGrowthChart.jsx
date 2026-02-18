@@ -241,17 +241,16 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
       else if (totalMonths > 6) monthIncrement = 2;
 
       const ticks = [];
-      // Start from the first day of the start month
       const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+      // Skip to first tick that's >= domainMin
+      while (current.getTime() < domainMin) {
+        current.setMonth(current.getMonth() + monthIncrement);
+      }
 
       while (current.getTime() <= domainMax) {
         ticks.push(current.getTime());
         current.setMonth(current.getMonth() + monthIncrement);
-      }
-
-      // Always include the end point
-      if (ticks[ticks.length - 1] < domainMax) {
-        ticks.push(domainMax);
       }
 
       return ticks;
@@ -400,7 +399,6 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
               tickFormatter={timeMode === 'indexed' ? formatMonthIndex : (ts) => formatMonth(new Date(ts).toISOString())}
               tick={{ fill: '#6B7280', fontSize: 11 }}
               ticks={getXAxisTicks()}
-              allowDataOverflow={true}
             />
             <YAxis
               domain={getYAxisDomain()}

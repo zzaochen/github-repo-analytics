@@ -190,6 +190,7 @@ export async function saveRepoToCache(owner, repo, dailyMetrics, incrementalUpda
         total_stars: m.totalStars,
         total_forks: m.totalForks,
         total_contributors: m.totalContributors,
+        total_commits: m.totalCommits,
         total_issues_opened: m.totalIssuesOpened,
         total_issues_closed: m.totalIssuesClosed,
         total_prs_opened: m.totalPRsOpened,
@@ -259,6 +260,7 @@ export function transformCachedMetrics(metrics) {
     totalStars: m.total_stars,
     totalForks: m.total_forks,
     totalContributors: m.total_contributors,
+    totalCommits: m.total_commits,
     totalIssuesOpened: m.total_issues_opened,
     totalIssuesClosed: m.total_issues_closed,
     totalPRsOpened: m.total_prs_opened,
@@ -330,6 +332,7 @@ export async function getAggregateStats(dateFilter = null) {
         totalStars: 0,
         totalForks: 0,
         totalContributors: 0,
+        totalCommits: 0,
         totalPRsOpened: 0,
         totalPRsMerged: 0,
         totalPRsClosed: 0,
@@ -345,7 +348,7 @@ export async function getAggregateStats(dateFilter = null) {
     const latestMetricsPromises = repoIds.map(repoId => {
       let query = supabase
         .from('daily_metrics')
-        .select('total_stars, total_forks, total_contributors, total_prs_opened, total_prs_merged, total_prs_closed')
+        .select('total_stars, total_forks, total_contributors, total_commits, total_prs_opened, total_prs_merged, total_prs_closed')
         .eq('repo_id', repoId);
 
       if (dateFilter?.endDate) {
@@ -367,6 +370,7 @@ export async function getAggregateStats(dateFilter = null) {
     let totalStars = 0;
     let totalForks = 0;
     let totalContributors = 0;
+    let totalCommits = 0;
     let totalPRsOpened = 0;
     let totalPRsMerged = 0;
     let totalPRsClosed = 0;
@@ -377,6 +381,7 @@ export async function getAggregateStats(dateFilter = null) {
         totalStars += result.data.total_stars || 0;
         totalForks += result.data.total_forks || 0;
         totalContributors += result.data.total_contributors || 0;
+        totalCommits += result.data.total_commits || 0;
         totalPRsOpened += result.data.total_prs_opened || 0;
         totalPRsMerged += result.data.total_prs_merged || 0;
         totalPRsClosed += result.data.total_prs_closed || 0;
@@ -390,6 +395,7 @@ export async function getAggregateStats(dateFilter = null) {
       totalStars,
       totalForks,
       totalContributors,
+      totalCommits,
       totalPRsOpened,
       totalPRsMerged,
       totalPRsClosed,
@@ -855,6 +861,7 @@ export async function savePartialMetrics(owner, repo, dailyMetrics) {
         total_stars: m.totalStars,
         total_forks: m.totalForks,
         total_contributors: m.totalContributors,
+        total_commits: m.totalCommits,
         total_issues_opened: m.totalIssuesOpened,
         total_issues_closed: m.totalIssuesClosed,
         total_prs_opened: m.totalPRsOpened,

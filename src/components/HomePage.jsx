@@ -603,6 +603,10 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                           <span className="text-xs font-bold text-gray-900">{aggregateStats.totalContributors.toLocaleString('en-US')}</span>
                         </div>
                         <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                          <span className="text-xs text-gray-600">Total Commits</span>
+                          <span className="text-xs font-bold text-gray-900">{(aggregateStats.totalCommits || 0).toLocaleString('en-US')}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1 border-b border-gray-100">
                           <span className="text-xs text-gray-600">Total PRs Opened</span>
                           <span className="text-xs font-bold text-gray-900">{aggregateStats.totalPRsOpened.toLocaleString('en-US')}</span>
                         </div>
