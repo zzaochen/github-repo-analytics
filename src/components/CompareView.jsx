@@ -14,8 +14,8 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
 
   const formatRatio = (num) => {
     if (num === null || num === undefined || !isFinite(num) || num === 0) return '--';
-    if (num < 0) return `(${Math.abs(num).toFixed(1)}x)`;
-    return `${num.toFixed(1)}x`;
+    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
   };
 
   const formatDate = (dateStr) => {
@@ -380,8 +380,8 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
 
   const formatRatio = (num) => {
     if (num === null || num === undefined || !isFinite(num) || num === 0) return '--';
-    if (num < 0) return `(${Math.abs(num).toFixed(1)}x)`;
-    return `${num.toFixed(1)}x`;
+    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
   };
 
   const formatDate = (dateStr) => {
