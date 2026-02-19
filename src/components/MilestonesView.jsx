@@ -122,8 +122,12 @@ export default function MilestonesView() {
     return acc;
   }, {});
 
-  // Convert to array and sort by stars
-  const repoList = Object.values(repoMilestones).sort((a, b) => b.latestStars - a.latestStars);
+  // Convert to array and sort by current stars (fallback to latestStars)
+  const repoList = Object.values(repoMilestones).sort((a, b) => {
+    const starsA = currentStarsMap[a.fullName] || a.latestStars;
+    const starsB = currentStarsMap[b.fullName] || b.latestStars;
+    return starsB - starsA;
+  });
 
   // Filter repos based on selected milestone filter
   const filteredRepos = filter === 'all'
@@ -247,7 +251,7 @@ export default function MilestonesView() {
                         </a>
                       </td>
                       <td className="py-1.5 text-right text-gray-600">
-                        {repo.latestStars.toLocaleString()}
+                        {(currentStarsMap[repo.fullName] || repo.latestStars).toLocaleString()}
                       </td>
                       {[...STAR_MILESTONES].reverse().map(milestone => (
                         <td key={milestone.type} className="py-1.5 text-center">
