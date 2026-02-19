@@ -228,7 +228,7 @@ export default function MilestonesView() {
                   <tr className="text-left text-gray-500 text-xs">
                     <th className="pb-2 font-medium w-8">#</th>
                     <th className="pb-2 font-medium">Repository</th>
-                    <th className="pb-2 font-medium text-right w-20">Stars</th>
+                    <th className="pb-2 font-medium text-right w-24">Current Stars</th>
                     {[...STAR_MILESTONES].reverse().map(milestone => (
                       <th key={milestone.type} className="pb-2 font-medium text-center w-12">
                         {milestone.label.replace(' Stars', '')}
