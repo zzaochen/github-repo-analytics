@@ -183,11 +183,16 @@ export default async function handler(req, res) {
       const bigquery = getBigQueryClient();
       const startTime = Date.now();
 
-      const [rows] = await bigquery.query({
+      // Create a query job and wait for results (avoids Storage Read API issues)
+      const [job] = await bigquery.createQueryJob({
         query: sql,
         location: 'US',
         maximumBytesBilled: '10000000000', // 10GB limit per query
         useLegacySql: false
+      });
+
+      const [rows] = await job.getQueryResults({
+        wrapIntegers: false
       });
 
       const elapsed = Date.now() - startTime;
