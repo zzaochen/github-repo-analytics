@@ -39,9 +39,9 @@ const PRESET_QUERIES = {
         CAST(DATE(created_at) AS STRING) as date,
         COUNT(*) as push_events,
         SUM(CAST(JSON_EXTRACT_SCALAR(payload, '$.size') AS INT64)) as total_commits
-      FROM \`githubarchive.day.*\`
+      FROM \`githubarchive.day.20*\`
       WHERE type = 'PushEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY date
       ORDER BY date
     `
@@ -53,9 +53,9 @@ const PRESET_QUERIES = {
       SELECT
         repo.name,
         COUNT(*) as new_stars
-      FROM \`githubarchive.day.*\`
+      FROM \`githubarchive.day.20*\`
       WHERE type = 'WatchEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY repo.name
       ORDER BY new_stars DESC
       LIMIT 100
@@ -68,9 +68,9 @@ const PRESET_QUERIES = {
       SELECT
         repo.name,
         COUNT(*) as new_forks
-      FROM \`githubarchive.day.*\`
+      FROM \`githubarchive.day.20*\`
       WHERE type = 'ForkEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY repo.name
       ORDER BY new_forks DESC
       LIMIT 100
@@ -83,9 +83,9 @@ const PRESET_QUERIES = {
       SELECT
         CAST(DATE(created_at) AS STRING) as date,
         COUNT(*) as stars
-      FROM \`githubarchive.day.*\`
+      FROM \`githubarchive.day.20*\`
       WHERE type = 'WatchEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY date
       ORDER BY date
     `
@@ -97,9 +97,9 @@ const PRESET_QUERIES = {
       SELECT
         CAST(DATE(created_at) AS STRING) as date,
         COUNT(*) as forks
-      FROM \`githubarchive.day.*\`
+      FROM \`githubarchive.day.20*\`
       WHERE type = 'ForkEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY date
       ORDER BY date
     `
@@ -111,10 +111,10 @@ const PRESET_QUERIES = {
       SELECT
         CAST(DATE(created_at) AS STRING) as date,
         COUNT(*) as new_repos
-      FROM \`githubarchive.day.*\`
+      FROM \`githubarchive.day.20*\`
       WHERE type = 'CreateEvent'
         AND JSON_EXTRACT_SCALAR(payload, '$.ref_type') = 'repository'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY date
       ORDER BY date
     `
@@ -126,10 +126,10 @@ const PRESET_QUERIES = {
       SELECT
         CAST(DATE(created_at) AS STRING) as date,
         COUNT(*) as prs_opened
-      FROM \`githubarchive.day.*\`
+      FROM \`githubarchive.day.20*\`
       WHERE type = 'PullRequestEvent'
         AND JSON_EXTRACT_SCALAR(payload, '$.action') = 'opened'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY date
       ORDER BY date
     `
