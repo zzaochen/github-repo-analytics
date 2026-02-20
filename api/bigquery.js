@@ -36,7 +36,7 @@ const PRESET_QUERIES = {
     description: 'Total push events and commits per month since 2011',
     sql: `
       SELECT
-        FORMAT_TIMESTAMP('%Y-%m', created_at) as month,
+        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
         COUNT(*) as push_events,
         SUM(CAST(JSON_EXTRACT_SCALAR(payload, '$.size') AS INT64)) as total_commits
       FROM \`githubarchive.month.*\`
@@ -51,7 +51,7 @@ const PRESET_QUERIES = {
     description: 'Daily commit activity for the last 90 days',
     sql: `
       SELECT
-        DATE(created_at) as date,
+        CAST(DATE(created_at) AS STRING) as date,
         COUNT(*) as push_events,
         SUM(CAST(JSON_EXTRACT_SCALAR(payload, '$.size') AS INT64)) as total_commits
       FROM \`githubarchive.day.*\`
@@ -81,7 +81,7 @@ const PRESET_QUERIES = {
     description: 'Push events by programming language over time',
     sql: `
       SELECT
-        FORMAT_TIMESTAMP('%Y-%m', created_at) as month,
+        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
         JSON_EXTRACT_SCALAR(payload, '$.pull_request.base.repo.language') as language,
         COUNT(*) as events
       FROM \`githubarchive.month.*\`
@@ -98,7 +98,7 @@ const PRESET_QUERIES = {
     description: 'Total star events per month',
     sql: `
       SELECT
-        FORMAT_TIMESTAMP('%Y-%m', created_at) as month,
+        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
         COUNT(*) as stars
       FROM \`githubarchive.month.*\`
       WHERE type = 'WatchEvent'
@@ -112,7 +112,7 @@ const PRESET_QUERIES = {
     description: 'Total fork events per month',
     sql: `
       SELECT
-        FORMAT_TIMESTAMP('%Y-%m', created_at) as month,
+        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
         COUNT(*) as forks
       FROM \`githubarchive.month.*\`
       WHERE type = 'ForkEvent'
@@ -126,7 +126,7 @@ const PRESET_QUERIES = {
     description: 'New public repositories created per month',
     sql: `
       SELECT
-        FORMAT_TIMESTAMP('%Y-%m', created_at) as month,
+        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
         COUNT(*) as new_repos
       FROM \`githubarchive.month.*\`
       WHERE type = 'CreateEvent'
@@ -186,7 +186,8 @@ export default async function handler(req, res) {
       const [rows] = await bigquery.query({
         query: sql,
         location: 'US',
-        maximumBytesBilled: '10000000000' // 10GB limit per query
+        maximumBytesBilled: '10000000000', // 10GB limit per query
+        useLegacySql: false
       });
 
       const elapsed = Date.now() - startTime;
