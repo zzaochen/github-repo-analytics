@@ -8,7 +8,21 @@ function getBigQueryClient() {
     throw new Error('GOOGLE_CLOUD_CREDENTIALS environment variable not set');
   }
 
-  const parsed = JSON.parse(credentials);
+  // Support both raw JSON and base64-encoded JSON
+  let parsed;
+  try {
+    // Try parsing as raw JSON first
+    parsed = JSON.parse(credentials);
+  } catch {
+    // If that fails, try base64 decoding
+    try {
+      const decoded = Buffer.from(credentials, 'base64').toString('utf-8');
+      parsed = JSON.parse(decoded);
+    } catch {
+      throw new Error('Invalid GOOGLE_CLOUD_CREDENTIALS format. Use raw JSON or base64-encoded JSON.');
+    }
+  }
+
   return new BigQuery({
     projectId: parsed.project_id,
     credentials: parsed
