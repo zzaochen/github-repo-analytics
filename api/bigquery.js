@@ -32,8 +32,8 @@ function getBigQueryClient() {
 // Preset queries for common GitHub Archive analytics
 const PRESET_QUERIES = {
   commits_over_time: {
-    name: 'Commits Over Time (Monthly)',
-    description: 'Total push events and commits per month since 2011',
+    name: 'Commits Over Time (Last 2 Years)',
+    description: 'Total push events and commits per month for the last 2 years',
     sql: `
       SELECT
         CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
@@ -41,14 +41,14 @@ const PRESET_QUERIES = {
         SUM(CAST(JSON_EXTRACT_SCALAR(payload, '$.size') AS INT64)) as total_commits
       FROM \`githubarchive.month.*\`
       WHERE type = 'PushEvent'
-        AND _TABLE_SUFFIX >= '201101'
+        AND _TABLE_SUFFIX >= '202401'
       GROUP BY month
       ORDER BY month
     `
   },
   commits_recent_daily: {
-    name: 'Daily Commits (Last 90 Days)',
-    description: 'Daily commit activity for the last 90 days',
+    name: 'Daily Commits (Last 30 Days)',
+    description: 'Daily commit activity for the last 30 days',
     sql: `
       SELECT
         CAST(DATE(created_at) AS STRING) as date,
@@ -56,29 +56,29 @@ const PRESET_QUERIES = {
         SUM(CAST(JSON_EXTRACT_SCALAR(payload, '$.size') AS INT64)) as total_commits
       FROM \`githubarchive.day.*\`
       WHERE type = 'PushEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
       GROUP BY date
       ORDER BY date
     `
   },
   top_repos_stars_month: {
-    name: 'Top Starred Repos (Last 30 Days)',
-    description: 'Repositories with most new stars in the last 30 days',
+    name: 'Top Starred Repos (Last 7 Days)',
+    description: 'Repositories with most new stars in the last 7 days',
     sql: `
       SELECT
         repo.name,
         COUNT(*) as new_stars
       FROM \`githubarchive.day.*\`
       WHERE type = 'WatchEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY repo.name
       ORDER BY new_stars DESC
       LIMIT 100
     `
   },
   language_trends: {
-    name: 'Language Trends (Monthly)',
-    description: 'Push events by programming language over time',
+    name: 'Language Trends (2024)',
+    description: 'Pull requests by programming language in 2024',
     sql: `
       SELECT
         CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
@@ -87,43 +87,43 @@ const PRESET_QUERIES = {
       FROM \`githubarchive.month.*\`
       WHERE type = 'PullRequestEvent'
         AND JSON_EXTRACT_SCALAR(payload, '$.action') = 'opened'
-        AND _TABLE_SUFFIX >= '202301'
+        AND _TABLE_SUFFIX >= '202401'
       GROUP BY month, language
       HAVING language IS NOT NULL
       ORDER BY month, events DESC
     `
   },
   stars_over_time: {
-    name: 'Stars Over Time (Monthly)',
-    description: 'Total star events per month',
+    name: 'Stars Over Time (Last 2 Years)',
+    description: 'Total star events per month for the last 2 years',
     sql: `
       SELECT
         CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
         COUNT(*) as stars
       FROM \`githubarchive.month.*\`
       WHERE type = 'WatchEvent'
-        AND _TABLE_SUFFIX >= '201101'
+        AND _TABLE_SUFFIX >= '202401'
       GROUP BY month
       ORDER BY month
     `
   },
   forks_over_time: {
-    name: 'Forks Over Time (Monthly)',
-    description: 'Total fork events per month',
+    name: 'Forks Over Time (Last 2 Years)',
+    description: 'Total fork events per month for the last 2 years',
     sql: `
       SELECT
         CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
         COUNT(*) as forks
       FROM \`githubarchive.month.*\`
       WHERE type = 'ForkEvent'
-        AND _TABLE_SUFFIX >= '201101'
+        AND _TABLE_SUFFIX >= '202401'
       GROUP BY month
       ORDER BY month
     `
   },
   new_repos_over_time: {
-    name: 'New Repos Created (Monthly)',
-    description: 'New public repositories created per month',
+    name: 'New Repos Created (Last 2 Years)',
+    description: 'New public repositories created per month for the last 2 years',
     sql: `
       SELECT
         CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
@@ -131,7 +131,7 @@ const PRESET_QUERIES = {
       FROM \`githubarchive.month.*\`
       WHERE type = 'CreateEvent'
         AND JSON_EXTRACT_SCALAR(payload, '$.ref_type') = 'repository'
-        AND _TABLE_SUFFIX >= '201101'
+        AND _TABLE_SUFFIX >= '202401'
       GROUP BY month
       ORDER BY month
     `
@@ -187,7 +187,7 @@ export default async function handler(req, res) {
       const [job] = await bigquery.createQueryJob({
         query: sql,
         location: 'US',
-        maximumBytesBilled: '10000000000', // 10GB limit per query
+        maximumBytesBilled: '100000000000', // 100GB limit per query (~$0.50)
         useLegacySql: false
       });
 
