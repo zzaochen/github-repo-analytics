@@ -5,7 +5,7 @@ const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#e
 
 export default function BigQueryExplorer() {
   const [presets, setPresets] = useState([]);
-  const [selectedPreset, setSelectedPreset] = useState('commits_over_time');
+  const [selectedPreset, setSelectedPreset] = useState('commits_recent_daily');
   const [customSql, setCustomSql] = useState('');
   const [useCustom, setUseCustom] = useState(false);
   const [loading, setLoading] = useState(false);

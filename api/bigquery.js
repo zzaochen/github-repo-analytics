@@ -31,24 +31,9 @@ function getBigQueryClient() {
 
 // Preset queries for common GitHub Archive analytics
 const PRESET_QUERIES = {
-  commits_over_time: {
-    name: 'Commits Over Time (Last 2 Years)',
-    description: 'Total push events and commits per month for the last 2 years',
-    sql: `
-      SELECT
-        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
-        COUNT(*) as push_events,
-        SUM(CAST(JSON_EXTRACT_SCALAR(payload, '$.size') AS INT64)) as total_commits
-      FROM \`githubarchive.month.*\`
-      WHERE type = 'PushEvent'
-        AND _TABLE_SUFFIX >= '202401'
-      GROUP BY month
-      ORDER BY month
-    `
-  },
   commits_recent_daily: {
-    name: 'Daily Commits (Last 30 Days)',
-    description: 'Daily commit activity for the last 30 days',
+    name: 'Daily Commits (Last 7 Days)',
+    description: 'Daily commit activity for the last 7 days',
     sql: `
       SELECT
         CAST(DATE(created_at) AS STRING) as date,
@@ -56,12 +41,12 @@ const PRESET_QUERIES = {
         SUM(CAST(JSON_EXTRACT_SCALAR(payload, '$.size') AS INT64)) as total_commits
       FROM \`githubarchive.day.*\`
       WHERE type = 'PushEvent'
-        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
       GROUP BY date
       ORDER BY date
     `
   },
-  top_repos_stars_month: {
+  top_repos_stars: {
     name: 'Top Starred Repos (Last 7 Days)',
     description: 'Repositories with most new stars in the last 7 days',
     sql: `
@@ -76,64 +61,77 @@ const PRESET_QUERIES = {
       LIMIT 100
     `
   },
-  language_trends: {
-    name: 'Language Trends (2024)',
-    description: 'Pull requests by programming language in 2024',
+  top_repos_forks: {
+    name: 'Top Forked Repos (Last 7 Days)',
+    description: 'Repositories with most new forks in the last 7 days',
     sql: `
       SELECT
-        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
-        JSON_EXTRACT_SCALAR(payload, '$.pull_request.base.repo.language') as language,
-        COUNT(*) as events
-      FROM \`githubarchive.month.*\`
-      WHERE type = 'PullRequestEvent'
-        AND JSON_EXTRACT_SCALAR(payload, '$.action') = 'opened'
-        AND _TABLE_SUFFIX >= '202401'
-      GROUP BY month, language
-      HAVING language IS NOT NULL
-      ORDER BY month, events DESC
-    `
-  },
-  stars_over_time: {
-    name: 'Stars Over Time (Last 2 Years)',
-    description: 'Total star events per month for the last 2 years',
-    sql: `
-      SELECT
-        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
-        COUNT(*) as stars
-      FROM \`githubarchive.month.*\`
-      WHERE type = 'WatchEvent'
-        AND _TABLE_SUFFIX >= '202401'
-      GROUP BY month
-      ORDER BY month
-    `
-  },
-  forks_over_time: {
-    name: 'Forks Over Time (Last 2 Years)',
-    description: 'Total fork events per month for the last 2 years',
-    sql: `
-      SELECT
-        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
-        COUNT(*) as forks
-      FROM \`githubarchive.month.*\`
+        repo.name,
+        COUNT(*) as new_forks
+      FROM \`githubarchive.day.*\`
       WHERE type = 'ForkEvent'
-        AND _TABLE_SUFFIX >= '202401'
-      GROUP BY month
-      ORDER BY month
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+      GROUP BY repo.name
+      ORDER BY new_forks DESC
+      LIMIT 100
     `
   },
-  new_repos_over_time: {
-    name: 'New Repos Created (Last 2 Years)',
-    description: 'New public repositories created per month for the last 2 years',
+  stars_daily: {
+    name: 'Daily Stars (Last 7 Days)',
+    description: 'Total star events per day for the last 7 days',
     sql: `
       SELECT
-        CONCAT(EXTRACT(YEAR FROM created_at), '-', LPAD(CAST(EXTRACT(MONTH FROM created_at) AS STRING), 2, '0')) as month,
+        CAST(DATE(created_at) AS STRING) as date,
+        COUNT(*) as stars
+      FROM \`githubarchive.day.*\`
+      WHERE type = 'WatchEvent'
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+      GROUP BY date
+      ORDER BY date
+    `
+  },
+  forks_daily: {
+    name: 'Daily Forks (Last 7 Days)',
+    description: 'Total fork events per day for the last 7 days',
+    sql: `
+      SELECT
+        CAST(DATE(created_at) AS STRING) as date,
+        COUNT(*) as forks
+      FROM \`githubarchive.day.*\`
+      WHERE type = 'ForkEvent'
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+      GROUP BY date
+      ORDER BY date
+    `
+  },
+  new_repos_daily: {
+    name: 'New Repos Created (Last 7 Days)',
+    description: 'New public repositories created per day for the last 7 days',
+    sql: `
+      SELECT
+        CAST(DATE(created_at) AS STRING) as date,
         COUNT(*) as new_repos
-      FROM \`githubarchive.month.*\`
+      FROM \`githubarchive.day.*\`
       WHERE type = 'CreateEvent'
         AND JSON_EXTRACT_SCALAR(payload, '$.ref_type') = 'repository'
-        AND _TABLE_SUFFIX >= '202401'
-      GROUP BY month
-      ORDER BY month
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+      GROUP BY date
+      ORDER BY date
+    `
+  },
+  prs_daily: {
+    name: 'Daily Pull Requests (Last 7 Days)',
+    description: 'Pull requests opened per day for the last 7 days',
+    sql: `
+      SELECT
+        CAST(DATE(created_at) AS STRING) as date,
+        COUNT(*) as prs_opened
+      FROM \`githubarchive.day.*\`
+      WHERE type = 'PullRequestEvent'
+        AND JSON_EXTRACT_SCALAR(payload, '$.action') = 'opened'
+        AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY))
+      GROUP BY date
+      ORDER BY date
     `
   }
 };
@@ -187,7 +185,7 @@ export default async function handler(req, res) {
       const [job] = await bigquery.createQueryJob({
         query: sql,
         location: 'US',
-        maximumBytesBilled: '100000000000', // 100GB limit per query (~$0.50)
+        maximumBytesBilled: '20000000000000', // 20TB limit per query
         useLegacySql: false
       });
 
