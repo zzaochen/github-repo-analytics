@@ -824,7 +824,7 @@ function App() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                GitHub Archive
+                Archive Analytics
               </Link>
 
               {/* Auth Button */}
