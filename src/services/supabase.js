@@ -127,6 +127,33 @@ export async function getRepoFromCache(owner, repo) {
   }
 }
 
+export async function updateRepoCompanyInfo(owner, repo, companyName, companyUrl) {
+  if (!supabase) return { success: false, error: 'Supabase not configured' };
+
+  try {
+    const { data, error } = await supabase
+      .from('repositories')
+      .update({
+        company_name: companyName || null,
+        company_url: companyUrl || null
+      })
+      .eq('owner', owner)
+      .eq('repo', repo)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating company info:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error updating company info:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function saveRepoToCache(owner, repo, dailyMetrics, incrementalUpdate = false, fetchState = null) {
   if (!supabase) return null;
 

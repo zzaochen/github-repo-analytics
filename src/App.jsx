@@ -46,6 +46,7 @@ function App() {
   const [lastFetched, setLastFetched] = useState(null);
   const [cacheKey, setCacheKey] = useState(0);
   const [starsPaginationLimited, setStarsPaginationLimited] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [token, setToken] = useState('');
   const location = useLocation();
@@ -151,6 +152,11 @@ function App() {
         setDailyData(transformedData);
         setDataSource('cache');
         setLastFetched(cached.repository.last_fetched);
+        // Set company info from cached repository
+        setCompanyInfo({
+          company_name: cached.repository.company_name,
+          company_url: cached.repository.company_url
+        });
         // Check if any metric is pagination limited
         const anyLimited = cached.fetchState?.stars?.limited ||
                           cached.fetchState?.forks?.limited ||
@@ -423,6 +429,11 @@ function App() {
         setDailyData(transformedData);
         setDataSource('cache');
         setLastFetched(cached.repository.last_fetched);
+        // Set company info from cached repository
+        setCompanyInfo({
+          company_name: cached.repository.company_name,
+          company_url: cached.repository.company_url
+        });
         // Check if any metric is pagination limited
         const anyLimited = cached.fetchState?.stars?.limited ||
                           cached.fetchState?.forks?.limited ||
@@ -899,6 +910,8 @@ function App() {
                     paginationLimited={starsPaginationLimited}
                     onContinueFetching={handleContinueFetching}
                     onDeleteAndRefetch={handleDeleteAndRefetch}
+                    companyInfo={companyInfo}
+                    onCompanyInfoUpdate={setCompanyInfo}
                   />
                 )}
 

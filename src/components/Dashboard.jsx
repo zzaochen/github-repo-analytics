@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import SummaryCards from './SummaryCards';
 import StarsChart from './StarsChart';
 import ForksChart from './ForksChart';
@@ -5,6 +6,7 @@ import ContributorsChart from './ContributorsChart';
 import IssuesChart from './IssuesChart';
 import PRsChart from './PRsChart';
 import ExportButton from './ExportButton';
+import { updateRepoCompanyInfo } from '../services/supabase';
 
 function formatDate(isoString) {
   if (!isoString) return '';
@@ -33,10 +35,26 @@ function formatNumberWithCommas(num) {
   return num?.toLocaleString('en-US') || '0';
 }
 
-export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched, onForceRefresh, paginationLimited, onContinueFetching, onDeleteAndRefetch }) {
+export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched, onForceRefresh, paginationLimited, onContinueFetching, onDeleteAndRefetch, companyInfo, onCompanyInfoUpdate }) {
   const latestMetrics = dailyData[dailyData.length - 1];
   const firstDate = dailyData[0]?.date;
   const lastDate = dailyData[dailyData.length - 1]?.date;
+
+  const [isEditingCompany, setIsEditingCompany] = useState(false);
+  const [companyName, setCompanyName] = useState(companyInfo?.company_name || '');
+  const [companyUrl, setCompanyUrl] = useState(companyInfo?.company_url || '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveCompanyInfo = async () => {
+    setIsSaving(true);
+    const [owner, repo] = repoInfo.name.split('/');
+    const result = await updateRepoCompanyInfo(owner, repo, companyName, companyUrl);
+    if (result.success && onCompanyInfoUpdate) {
+      onCompanyInfoUpdate({ company_name: companyName, company_url: companyUrl });
+    }
+    setIsSaving(false);
+    setIsEditingCompany(false);
+  };
 
   const getStatusDisplay = () => {
     switch (dataSource) {
@@ -83,6 +101,76 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
             </a>
           </h2>
           <p className="text-gray-500 text-sm mt-1">Last updated: {formatDate(lastFetched)}</p>
+
+          {/* Company Info */}
+          <div className="mt-2">
+            {isEditingCompany ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Company name"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="url"
+                  value={companyUrl}
+                  onChange={(e) => setCompanyUrl(e.target.value)}
+                  placeholder="Company URL"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleSaveCompanyInfo}
+                  disabled={isSaving}
+                  className="px-2 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingCompany(false);
+                    setCompanyName(companyInfo?.company_name || '');
+                    setCompanyUrl(companyInfo?.company_url || '');
+                  }}
+                  className="px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm">
+                {companyInfo?.company_name ? (
+                  <>
+                    <span className="text-gray-600">Company:</span>
+                    {companyInfo?.company_url ? (
+                      <a
+                        href={companyInfo.company_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {companyInfo.company_name}
+                      </a>
+                    ) : (
+                      <span className="text-gray-800">{companyInfo.company_name}</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-gray-400 italic">No company info</span>
+                )}
+                <button
+                  onClick={() => setIsEditingCompany(true)}
+                  className="text-gray-400 hover:text-gray-600"
+                  title="Edit company info"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <ExportButton data={dailyData} repoName={repoInfo.name} />
