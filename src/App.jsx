@@ -127,8 +127,23 @@ function App() {
       console.log('Cache result:', cached);
 
       if (cached && cached.metrics.length > 0) {
-        const octokit = createGitHubClient(token);
-        const info = await fetchRepoInfo(octokit, owner, repo);
+        // If we have a token, fetch live repo info; otherwise use cached data
+        let info;
+        if (token) {
+          const octokit = createGitHubClient(token);
+          info = await fetchRepoInfo(octokit, owner, repo);
+        } else {
+          // Build basic repo info from cached data
+          const lastMetric = cached.metrics[cached.metrics.length - 1];
+          info = {
+            name: `${owner}/${repo}`,
+            description: cached.repository.description || '',
+            stars: lastMetric?.total_stars || lastMetric?.totalStars || 0,
+            forks: lastMetric?.total_forks || lastMetric?.totalForks || 0,
+            openIssues: 0,
+            createdAt: cached.repository.created_at
+          };
+        }
         setRepoInfo(info);
         const transformedData = transformCachedMetrics(cached.metrics);
         console.log('Transformed data sample (last 3 days):', JSON.stringify(transformedData.slice(-3), null, 2));
@@ -142,9 +157,13 @@ function App() {
                           cached.fetchState?.prs?.limited;
         setStarsPaginationLimited(anyLimited || false);
       } else {
-        console.log('No cache found, fetching from GitHub...');
-        // No cache, need to fetch
-        await fetchData(owner, repo, token, null); // null = fresh fetch, no resume state
+        // No cache found
+        if (token) {
+          console.log('No cache found, fetching from GitHub...');
+          await fetchData(owner, repo, token, null); // null = fresh fetch, no resume state
+        } else {
+          setError('No cached data found for this repository. Sign in to fetch fresh data.');
+        }
       }
     } catch (err) {
       console.error('Error loading from cache:', err);
@@ -506,9 +525,7 @@ function App() {
   // Handle clicking a cached repo
   const handleCachedRepoSelect = (owner, repo) => {
     const token = localStorage.getItem('github_analytics_token');
-    if (token) {
-      loadFromCache(owner, repo, token);
-    }
+    loadFromCache(owner, repo, token); // Works with or without token for cached data
   };
 
   // Handle refreshing all cached repos (update data + calculate MoM metrics)
