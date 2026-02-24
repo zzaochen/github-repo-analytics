@@ -775,11 +775,12 @@ function App() {
                   )}
                   {lastCronRun && (
                     <p className="text-xs text-gray-500 mt-2">
-                      Last auto-refresh: {new Date(lastCronRun.run_at).toLocaleDateString('en-US', {
+                      Last auto-refresh: {new Date(lastCronRun.run_at).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        timeZoneName: 'short'
                       })}
                     </p>
                   )}
