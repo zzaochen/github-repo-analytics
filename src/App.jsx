@@ -32,7 +32,8 @@ import {
   signInWithGitHub,
   signOut,
   getSession,
-  onAuthStateChange
+  onAuthStateChange,
+  getLastCronRun
 } from './services/supabase';
 import { aggregateToDaily, aggregateIncrementalToDaily } from './utils/dataAggregator';
 
@@ -54,6 +55,7 @@ function App() {
   const [refreshProgress, setRefreshProgress] = useState('');
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const [lastCronRun, setLastCronRun] = useState(null);
 
   const TOKEN_KEY = 'github_analytics_token';
 
@@ -97,6 +99,15 @@ function App() {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch last cron run time
+  useEffect(() => {
+    const fetchLastCronRun = async () => {
+      const cronData = await getLastCronRun('weekly');
+      setLastCronRun(cronData);
+    };
+    fetchLastCronRun();
   }, []);
 
   const handleSignIn = async () => {
@@ -761,6 +772,16 @@ function App() {
                   </button>
                   {refreshProgress && (
                     <p className="text-xs text-blue-600 mt-2">{refreshProgress}</p>
+                  )}
+                  {lastCronRun && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Last auto-refresh: {new Date(lastCronRun.run_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
                   )}
                 </div>
 
