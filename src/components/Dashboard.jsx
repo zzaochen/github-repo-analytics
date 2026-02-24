@@ -111,14 +111,14 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="Company name"
-                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="url"
                   value={companyUrl}
                   onChange={(e) => setCompanyUrl(e.target.value)}
                   placeholder="Company URL"
-                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={handleSaveCompanyInfo}
