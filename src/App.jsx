@@ -101,10 +101,10 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch last cron run time
+  // Fetch last cron run time for refresh-repos job
   useEffect(() => {
     const fetchLastCronRun = async () => {
-      const cronData = await getLastCronRun('weekly');
+      const cronData = await getLastCronRun('refresh-repos');
       setLastCronRun(cronData);
     };
     fetchLastCronRun();

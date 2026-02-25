@@ -1006,11 +1006,12 @@ export function mergeDailyMetrics(existingMetrics, newMetrics) {
 }
 
 // Get the last cron run from cron_logs table
-export async function getLastCronRun(period = 'weekly') {
+export async function getLastCronRun(jobType = 'weekly') {
   if (!supabase) return null;
 
   try {
-    const jobName = `check-trending-${period}`;
+    // Support direct job names (like 'refresh-repos') or period-based (like 'weekly' -> 'check-trending-weekly')
+    const jobName = jobType.includes('-') ? jobType : `check-trending-${jobType}`;
     let { data, error } = await supabase
       .from('cron_logs')
       .select('*')
@@ -1020,7 +1021,7 @@ export async function getLastCronRun(period = 'weekly') {
       .single();
 
     // Fallback: check old job name format for weekly (before we added period suffix)
-    if (error && period === 'weekly') {
+    if (error && jobType === 'weekly') {
       const fallback = await supabase
         .from('cron_logs')
         .select('*')
