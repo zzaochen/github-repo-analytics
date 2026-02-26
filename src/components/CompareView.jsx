@@ -736,8 +736,8 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
 
   const formatRatio = (num) => {
     if (num === null || num === undefined || !isFinite(num) || num === 0) return '--';
-    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)`;
-    return `${num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
+    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x)`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`;
   };
 
   const formatDate = (dateStr) => {
@@ -1092,8 +1092,8 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
 
   const formatRatio = (num) => {
     if (num === null || num === undefined || !isFinite(num) || num === 0) return '--';
-    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)`;
-    return `${num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
+    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x)`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`;
   };
 
   const formatDate = (dateStr) => {
@@ -1448,8 +1448,8 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
 
   const formatRatio = (num) => {
     if (num === null || num === undefined || !isFinite(num) || num === 0) return '--';
-    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x)`;
-    return `${num.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
+    if (num < 0) return `(${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x)`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`;
   };
 
   const formatDate = (dateStr) => {
