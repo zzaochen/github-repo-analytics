@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useSearchParams } from 'react-router-dom';
 import LoadingProgress from './components/LoadingProgress';
 import Dashboard from './components/Dashboard';
 import CachedRepos from './components/CachedRepos';
@@ -7,6 +7,8 @@ import TokenSettings from './components/TokenSettings';
 import CompareView from './components/CompareView';
 import TrendingView from './components/TrendingView';
 import MilestonesView from './components/MilestonesView';
+import ChatView from './components/ChatView';
+import PRTimeline from './components/PRTimeline';
 import HomePage from './components/HomePage';
 import BatchFetch from './components/BatchFetch';
 import RateLimitStatus from './components/RateLimitStatus';
@@ -49,8 +51,12 @@ function App() {
   const [starsPaginationLimited, setStarsPaginationLimited] = useState(false);
   const [companyInfo, setCompanyInfo] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [prTimelineOpen, setPrTimelineOpen] = useState(false);
+  const [prTimelineKey, setPrTimelineKey] = useState(0);
   const [token, setToken] = useState('');
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [refreshProgress, setRefreshProgress] = useState('');
   const [user, setUser] = useState(null);
@@ -109,6 +115,17 @@ function App() {
     };
     fetchLastCronRun();
   }, []);
+
+  // Auto-load repo from query params on /lookup (e.g. /lookup?owner=facebook&repo=react)
+  useEffect(() => {
+    if (location.pathname === '/lookup') {
+      const owner = searchParams.get('owner');
+      const repo = searchParams.get('repo');
+      if (owner && repo) {
+        handleCachedRepoSelect(owner, repo);
+      }
+    }
+  }, [location.pathname, searchParams]);
 
   const handleSignIn = async () => {
     setAuthLoading(true);
@@ -865,7 +882,19 @@ function App() {
               >
                 Repo Milestones
               </Link>
-
+              {/* AI Fetch Button */}
+              {!chatOpen && (
+                <button
+                  onClick={() => { setChatOpen(true); setPrTimelineOpen(false); }}
+                  className="pl-4 border-l border-gray-200 flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                  title="Open AI Fetch"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                  AI Fetch
+                </button>
+              )}
               {/* Auth Button */}
               {user ? (
                 <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
@@ -900,7 +929,7 @@ function App() {
           </div>
         </div>
 
-        <div className={`${sidebarOpen ? 'max-w-7xl' : 'max-w-[1600px]'} mx-auto px-8 py-8`}>
+        <div className={`${sidebarOpen && (chatOpen || prTimelineOpen) ? 'max-w-5xl' : sidebarOpen || chatOpen || prTimelineOpen ? 'max-w-7xl' : 'max-w-[1600px]'} mx-auto px-8 py-8`}>
           <Routes>
             {/* Home - Trending Overview */}
             <Route path="/" element={<HomePage onRepoSelect={handleCachedRepoSelect} onOpenSidebar={() => setSidebarOpen(true)} />} />
@@ -934,6 +963,7 @@ function App() {
                     onDeleteAndRefetch={handleDeleteAndRefetch}
                     companyInfo={companyInfo}
                     onCompanyInfoUpdate={setCompanyInfo}
+                    onOpenPrTimeline={() => { setPrTimelineOpen(true); setChatOpen(false); }}
                   />
                 )}
 
@@ -956,7 +986,77 @@ function App() {
 
             {/* Milestones View */}
             <Route path="/milestones" element={<MilestonesView />} />
+
           </Routes>
+        </div>
+      </div>
+
+      {/* Right Sidebar - AI Fetch */}
+      <div
+        className={`${
+          chatOpen ? 'w-96' : 'w-0'
+        } transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}
+      >
+        <div className={`w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 ${chatOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              <h2 className="text-lg font-semibold text-gray-800">AI Fetch</h2>
+            </div>
+            <button
+              onClick={() => setChatOpen(false)}
+              className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Hide chat"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <ChatView />
+          </div>
+        </div>
+      </div>
+
+      {/* Right Sidebar - PR Timeline */}
+      <div
+        className={`${
+          prTimelineOpen ? 'w-96' : 'w-0'
+        } transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}
+      >
+        <div className={`w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 ${prTimelineOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-900" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+              </svg>
+              <h2 className="text-lg font-semibold text-gray-800">PR History</h2>
+              <button
+                onClick={() => setPrTimelineKey(k => k + 1)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Refresh PR History"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <button
+                onClick={() => setPrTimelineOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Close PR History"
+              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <PRTimeline key={prTimelineKey} repoName={repoInfo?.name} token={token} />
+          </div>
         </div>
       </div>
     </div>

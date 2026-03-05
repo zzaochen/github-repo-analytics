@@ -1,6 +1,9 @@
 // Simple local API server for development
+import 'dotenv/config';
 import http from 'http';
 import { URL } from 'url';
+import chatHandler from './api/chat.js';
+import prTimelineHandler from './api/pr-timeline.js';
 
 const PORT = 3001;
 
@@ -76,7 +79,7 @@ function parseTrendingHtml(html) {
 const server = http.createServer(async (req, res) => {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -98,6 +101,63 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: error.message }));
     }
+  } else if (url.pathname === '/api/chat') {
+    // Adapt raw http request to Vercel-style req/res for the chat handler
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const fakeReq = {
+          method: req.method,
+          body: body ? JSON.parse(body) : {},
+          query: Object.fromEntries(url.searchParams),
+        };
+        const fakeRes = {
+          statusCode: 200,
+          headers: {},
+          setHeader(k, v) { this.headers[k] = v; res.setHeader(k, v); },
+          status(code) { this.statusCode = code; return this; },
+          json(data) {
+            res.writeHead(this.statusCode, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(data));
+          },
+          end() { res.writeHead(this.statusCode); res.end(); },
+        };
+        await chatHandler(fakeReq, fakeRes);
+      } catch (error) {
+        console.error('Chat error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
+  } else if (url.pathname === '/api/pr-timeline') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const fakeReq = {
+          method: req.method,
+          body: body ? JSON.parse(body) : {},
+          query: Object.fromEntries(url.searchParams),
+        };
+        const fakeRes = {
+          statusCode: 200,
+          headers: {},
+          setHeader(k, v) { this.headers[k] = v; res.setHeader(k, v); },
+          status(code) { this.statusCode = code; return this; },
+          json(data) {
+            res.writeHead(this.statusCode, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(data));
+          },
+          end() { res.writeHead(this.statusCode); res.end(); },
+        };
+        await prTimelineHandler(fakeReq, fakeRes);
+      } catch (error) {
+        console.error('PR Timeline error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
   } else {
     res.writeHead(404);
     res.end('Not found');
