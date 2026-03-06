@@ -34,7 +34,7 @@ export default function IssuesChart({ data }) {
             labelStyle={{ color: '#374151' }}
             formatter={(value, name) => [value.toLocaleString('en-US'), name]}
           />
-          <Legend />
+          <Legend wrapperStyle={{ fontSize: '10px' }} />
           <Area
             type="monotone"
             dataKey="totalIssuesOpened"
