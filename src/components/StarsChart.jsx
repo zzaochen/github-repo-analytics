@@ -17,7 +17,7 @@ export default function StarsChart({ data }) {
   if (!hasStarData) {
     return (
       <ChartCard title="Stars Over Time">
-        <div style={{ height: '250px' }} className="flex items-center justify-center text-gray-400">
+        <div className="h-full flex items-center justify-center text-gray-400">
           <div className="text-center">
             <p>Historical star data unavailable</p>
             <p className="text-sm mt-1">Click "Continue Fetching" to retrieve star history</p>
@@ -29,11 +29,11 @@ export default function StarsChart({ data }) {
 
   return (
     <ChartCard title="Stars Over Time">
-      <ResponsiveContainer width="100%" height={250}>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData}>
           <XAxis
             dataKey="date"
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 10 }}
             tickFormatter={(val) => {
               const date = new Date(val);
               const month = date.toLocaleDateString('en-US', { month: 'short' });
@@ -42,7 +42,7 @@ export default function StarsChart({ data }) {
             }}
           />
           <YAxis
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 10 }}
             tickFormatter={(val) => val.toLocaleString('en-US')}
           />
           <Tooltip

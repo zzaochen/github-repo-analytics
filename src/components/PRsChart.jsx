@@ -13,11 +13,11 @@ export default function PRsChart({ data }) {
 
   return (
     <ChartCard title="Pull Requests Over Time">
-      <ResponsiveContainer width="100%" height={250}>
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartData}>
           <XAxis
             dataKey="date"
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 10 }}
             tickFormatter={(val) => {
               const date = new Date(val);
               const month = date.toLocaleDateString('en-US', { month: 'short' });
@@ -26,7 +26,7 @@ export default function PRsChart({ data }) {
             }}
           />
           <YAxis
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 10 }}
             tickFormatter={(val) => val.toLocaleString('en-US')}
           />
           <Tooltip

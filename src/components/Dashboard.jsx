@@ -191,10 +191,10 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
 
       {/* Data source indicator */}
       <div className="status-bar flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2 mb-6 shadow-sm gap-2">
-        <div className="flex items-center gap-2 flex-wrap text-xs">
-          <span className="flex items-center gap-2">
-            <span className={`w-2 h-2 bg-${status.color}-500 rounded-full`}></span>
-            <span className={`text-${status.color}-600 font-medium`}>{status.label}</span>
+        <div className="flex items-center gap-2 flex-wrap text-xs min-w-0">
+          <span className="flex items-center gap-1.5 shrink-0">
+            <span className={`w-2 h-2 bg-${status.color}-500 rounded-full shrink-0`}></span>
+            <span className={`text-${status.color}-600 font-medium whitespace-nowrap`}>{status.label}</span>
           </span>
           {status.detail && (
             <>

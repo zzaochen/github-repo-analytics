@@ -819,10 +819,10 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 min-w-0 overflow-hidden">
         {/* Top Navigation Bar */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center justify-between w-full">
+        <div className="bg-white border-b border-gray-200 px-3 py-2">
+          <div className="flex items-center justify-between w-full gap-2">
             {/* Left section: hamburger menu and title */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 shrink-0">
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}
@@ -841,7 +841,7 @@ function App() {
                 <span className="hidden xl:inline">GitHub Repository Analytics</span>
               </Link>
             </div>
-            <nav className="flex items-center gap-2 lg:gap-4">
+            <nav className="flex items-center gap-1.5 lg:gap-3 min-w-0">
               <Link
                 to="/lookup"
                 className={`text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${

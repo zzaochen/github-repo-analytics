@@ -13,11 +13,11 @@ export default function IssuesChart({ data }) {
 
   return (
     <ChartCard title="Issues Over Time">
-      <ResponsiveContainer width="100%" height={250}>
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartData}>
           <XAxis
             dataKey="date"
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 10 }}
             tickFormatter={(val) => {
               const date = new Date(val);
               const month = date.toLocaleDateString('en-US', { month: 'short' });
@@ -26,7 +26,7 @@ export default function IssuesChart({ data }) {
             }}
           />
           <YAxis
-            tick={{ fill: '#6B7280', fontSize: 12 }}
+            tick={{ fill: '#6B7280', fontSize: 10 }}
             tickFormatter={(val) => val.toLocaleString('en-US')}
           />
           <Tooltip
