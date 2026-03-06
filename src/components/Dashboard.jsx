@@ -210,7 +210,7 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
           )}
           <button
             onClick={onForceRefresh}
-            className="flex items-center gap-1.5 px-2 xl:px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs xl:text-sm transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs transition-colors whitespace-nowrap"
             title="Update to Today"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -221,7 +221,7 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
           </button>
           <button
             onClick={onDeleteAndRefetch}
-            className="flex items-center gap-1.5 px-2 xl:px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs xl:text-sm transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs transition-colors whitespace-nowrap"
             title="Delete cached data and fetch fresh from GitHub"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
