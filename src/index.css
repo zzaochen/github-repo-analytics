@@ -33,6 +33,8 @@ body {
 
 @container (max-width: 600px) {
   .status-bar { flex-direction: column !important; align-items: flex-start !important; }
+}
+@container (max-width: 900px) {
   .status-detail { display: none !important; }
 }
 
