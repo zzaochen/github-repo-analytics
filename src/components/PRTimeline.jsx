@@ -83,17 +83,23 @@ function ImpactSummary({ timeline, overallSummary }) {
 export default function PRTimeline({ repoName, token }) {
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [truncated, setTruncated] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [overallSummary, setOverallSummary] = useState('');
+  const [oldestDate, setOldestDate] = useState(null);
 
-  const fetchTimeline = async () => {
+  const fetchTimeline = async (before = null) => {
     if (!repoName) return;
 
     const [owner, repo] = repoName.split('/');
     if (!owner || !repo) return;
 
-    setLoading(true);
+    if (before) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -101,7 +107,7 @@ export default function PRTimeline({ repoName, token }) {
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner, repo, githubToken: token }),
+        body: JSON.stringify({ owner, repo, githubToken: token, before }),
       });
 
       if (!res.ok) {
@@ -110,13 +116,20 @@ export default function PRTimeline({ repoName, token }) {
       }
 
       const data = await res.json();
-      setTimeline(data.timeline || []);
-      setOverallSummary(data.overallSummary || '');
-      setTruncated(data.truncated || false);
+      if (before) {
+        // Append to existing timeline
+        setTimeline(prev => [...prev, ...(data.timeline || [])]);
+      } else {
+        setTimeline(data.timeline || []);
+        setOverallSummary(data.overallSummary || '');
+      }
+      setHasMore(data.hasMore || false);
+      setOldestDate(data.oldestMergedAt || null);
     } catch (err) {
       setError(err.message || 'Failed to fetch PR timeline');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -231,9 +244,27 @@ export default function PRTimeline({ repoName, token }) {
             </div>
           ))}
 
-          {truncated && (
+          {/* Load More */}
+          {hasMore && (
+            <div className="text-center py-4 border-t border-gray-100">
+              {loadingMore ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+                  <span className="text-xs text-gray-500">Loading more PRs...</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fetchTimeline(oldestDate)}
+                  className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Load More PRs
+                </button>
+              )}
+            </div>
+          )}
+          {!hasMore && timeline.length > 0 && (
             <div className="text-center py-3 text-xs text-gray-400 border-t border-gray-100">
-              Showing first 50 PRs (more available)
+              No more PRs to load
             </div>
           )}
         </div>

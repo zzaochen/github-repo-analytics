@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
   }
 
-  const { owner, repo, githubToken } = req.body;
+  const { owner, repo, githubToken, before } = req.body;
   if (!owner || !repo) {
     return res.status(400).json({ error: 'owner and repo are required' });
   }
@@ -34,14 +34,14 @@ export default async function handler(req, res) {
   try {
     const octokit = new Octokit({ auth: githubToken || undefined });
 
-    // Fetch closed PRs sorted by updated desc
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    // If `before` is provided, fetch PRs merged before that date (pagination)
+    const beforeDate = before ? new Date(before) : null;
 
-    // Fetch merged PRs — paginate until we have enough or pass the 3-month window
+    // Fetch merged PRs — paginate until we have enough
     let mergedPRs = [];
     let page = 1;
     const perPage = 100;
+    let reachedEnd = false;
 
     while (mergedPRs.length < 50) {
       const { data: prs } = await octokit.pulls.list({
@@ -54,15 +54,15 @@ export default async function handler(req, res) {
         page,
       });
 
-      if (prs.length === 0) break;
+      if (prs.length === 0) {
+        reachedEnd = true;
+        break;
+      }
 
       for (const pr of prs) {
         if (!pr.merged_at) continue;
-        if (new Date(pr.merged_at) < threeMonthsAgo) {
-          // Past our window — stop
-          page = Infinity;
-          break;
-        }
+        // Skip PRs that are newer than our "before" cursor
+        if (beforeDate && new Date(pr.merged_at) >= beforeDate) continue;
         mergedPRs.push(pr);
         if (mergedPRs.length >= 50) break;
       }
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     }
 
     if (mergedPRs.length === 0) {
-      return res.status(200).json({ timeline: [], truncated: false });
+      return res.status(200).json({ timeline: [], truncated: false, hasMore: false });
     }
 
     // Fetch per-PR details (additions/deletions) in batches of 10
@@ -159,10 +159,16 @@ ${prDescriptions}`,
     // Sort most recent first
     timeline.sort((a, b) => new Date(b.mergedAt) - new Date(a.mergedAt));
 
+    // Determine the oldest merged date for cursor-based pagination
+    const oldestMergedAt = timeline.length > 0 ? timeline[timeline.length - 1].mergedAt : null;
+    const hasMore = mergedPRs.length >= 50 && !reachedEnd;
+
     return res.status(200).json({
       timeline,
-      overallSummary,
-      truncated: mergedPRs.length >= 50,
+      overallSummary: before ? '' : overallSummary, // Only send overall summary on first page
+      truncated: hasMore,
+      hasMore,
+      oldestMergedAt,
     });
   } catch (error) {
     console.error('PR Timeline API error:', error);
