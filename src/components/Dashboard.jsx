@@ -100,7 +100,7 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
               </svg>
             </a>
           </h2>
-          <p className="text-gray-500 text-sm mt-1 status-detail">Last updated: {formatDate(lastFetched)}</p>
+          <p className="text-gray-400 text-xs italic mt-1 status-detail">Last updated: {formatDate(lastFetched)}</p>
 
           {/* Company Info */}
           <div className="mt-2">
