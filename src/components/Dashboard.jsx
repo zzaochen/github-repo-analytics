@@ -207,7 +207,7 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
             Data: {formatDateShort(firstDate)} → {formatDateShort(lastDate)} ({formatNumberWithCommas(dailyData.length)} days)
           </span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0">
           {paginationLimited && (
             <button
               onClick={onContinueFetching}
