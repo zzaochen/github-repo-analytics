@@ -115,9 +115,9 @@ export default async function handler(req, res) {
       messages: [
         {
           role: 'user',
-          content: `Given these merged pull requests, return a JSON object with two fields:
-1. "prs": an array of objects with "number" and "summary" fields, where each summary is exactly one short sentence (max 15 words).
-2. "overallSummary": a 2-3 sentence plain-text summary of the overall impact and themes across all these PRs.
+          content: `Given these merged pull requests for the ${owner}/${repo} repository, return a JSON object with two fields:
+1. "prs": an array of objects with "number" and "summary" fields. Each summary should be one sentence (max 20 words) written in plain, non-technical language that anyone can understand. Focus on the real-world impact on the project — what changed for users, what got better/faster/fixed, or what new capability was added. Avoid jargon like "refactor", "middleware", "API", "module", "dependency", "config" etc. Instead describe what the change actually does in human terms.
+2. "overallSummary": a 2-3 sentence plain-text summary of the overall impact and direction of the project based on these PRs, written for a non-technical audience.
 
 Only return the JSON object, nothing else.
 
