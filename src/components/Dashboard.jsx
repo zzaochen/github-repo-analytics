@@ -111,19 +111,19 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="Company name"
-                  className="px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="url"
                   value={companyUrl}
                   onChange={(e) => setCompanyUrl(e.target.value)}
                   placeholder="Company URL"
-                  className="px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={handleSaveCompanyInfo}
                   disabled={isSaving}
-                  className="px-2 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
+                  className="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
                 >
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
@@ -133,13 +133,13 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
                     setCompanyName(companyInfo?.company_name || '');
                     setCompanyUrl(companyInfo?.company_url || '');
                   }}
-                  className="px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
+                  className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
                 >
                   Cancel
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-xs">
                 {companyInfo?.company_name ? (
                   <>
                     <span className="text-gray-600">Company:</span>
@@ -164,7 +164,7 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
                   className="text-gray-400 hover:text-gray-600"
                   title="Edit company info"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                   </svg>
                 </button>
