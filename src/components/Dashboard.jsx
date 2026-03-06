@@ -83,10 +83,10 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
   const status = getStatusDisplay();
 
   return (
-    <div>
+    <div className="dashboard-container">
       <div className="flex justify-between items-center mb-4">
-        <div>
-          <h2 className="text-lg lg:text-2xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
+        <div className="min-w-0">
+          <h2 className="dashboard-heading font-bold text-gray-900 flex items-center gap-2 flex-wrap">
             {repoInfo.name}
             <a
               href={`https://github.com/${repoInfo.name}`}
@@ -190,20 +190,20 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
       </div>
 
       {/* Data source indicator */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between bg-white border border-gray-200 rounded-lg px-3 lg:px-4 py-2 lg:py-3 mb-6 shadow-sm gap-2">
-        <div className="flex items-center gap-2 lg:gap-3 flex-wrap text-xs lg:text-sm">
+      <div className="status-bar flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2 mb-6 shadow-sm gap-2">
+        <div className="flex items-center gap-2 flex-wrap text-xs">
           <span className="flex items-center gap-2">
             <span className={`w-2 h-2 bg-${status.color}-500 rounded-full`}></span>
             <span className={`text-${status.color}-600 font-medium`}>{status.label}</span>
           </span>
           {status.detail && (
             <>
-              <span className="text-gray-300 hidden xl:inline">|</span>
-              <span className="text-gray-600 hidden xl:inline">{status.detail}</span>
+              <span className="text-gray-300 status-detail">|</span>
+              <span className="text-gray-600 status-detail">{status.detail}</span>
             </>
           )}
-          <span className="text-gray-300 hidden lg:inline">|</span>
-          <span className="text-gray-600 hidden lg:inline">
+          <span className="text-gray-300 status-detail">|</span>
+          <span className="text-gray-600 status-detail">
             Data: {formatDateShort(firstDate)} → {formatDateShort(lastDate)} ({formatNumberWithCommas(dailyData.length)} days)
           </span>
         </div>
@@ -247,12 +247,12 @@ export default function Dashboard({ repoInfo, dailyData, dataSource, lastFetched
 
       <SummaryCards repoInfo={repoInfo} latestMetrics={latestMetrics} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 mb-4">
+      <div className="grid grid-cols-1 charts-2col gap-3 mb-4">
         <StarsChart data={dailyData} />
         <ForksChart data={dailyData} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
+      <div className="grid grid-cols-1 charts-3col gap-3">
         <ContributorsChart data={dailyData} />
         <IssuesChart data={dailyData} />
         <PRsChart data={dailyData} />

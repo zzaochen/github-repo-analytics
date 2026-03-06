@@ -34,11 +34,11 @@ export default function SummaryCards({ repoInfo, latestMetrics }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
+    <div className="grid grid-cols-2 summary-grid gap-3 mb-6">
       {cards.map(({ label, value, color, note }) => (
-        <div key={label} className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4 shadow-sm">
-          <p className="text-gray-500 text-xs lg:text-sm mb-1">{label}</p>
-          <p className={`text-lg lg:text-2xl font-bold ${color}`}>
+        <div key={label} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+          <p className="text-gray-500 text-xs mb-1">{label}</p>
+          <p className={`text-lg font-bold ${color}`}>
             {value}
             {note && <span className="text-xs text-gray-400 ml-1">{note}</span>}
           </p>

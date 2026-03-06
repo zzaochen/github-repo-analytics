@@ -817,7 +817,7 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         {/* Top Navigation Bar */}
         <div className="bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between w-full">
