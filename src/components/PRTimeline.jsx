@@ -45,6 +45,7 @@ function ImpactSummary({ timeline, overallSummary }) {
 
   return (
     <div className="mx-3 mt-3 mb-1 p-3 bg-gray-50 rounded-xl border border-gray-100">
+      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider text-center mb-2">Last 3 Months</div>
       <div className="grid grid-cols-2 gap-3">
         <div className="text-center">
           <div className="text-xl font-bold text-gray-900">{totalPRs}</div>
