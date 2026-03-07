@@ -2,8 +2,13 @@
 // Run SQL commands against Supabase using the JS client
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://brelelsghtiqdnlisaro.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'sb_publishable_XYSLVORTtH_3cKFMpESEqg_YMC-bl67';
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

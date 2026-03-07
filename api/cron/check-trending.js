@@ -149,12 +149,8 @@ async function logCronRun(supabase, results, period = 'weekly') {
 export default async function handler(req, res) {
   // Verify this is a cron request (Vercel adds this header)
   const authHeader = req.headers['authorization'];
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    // In development or if no CRON_SECRET set, allow the request
-    if (process.env.CRON_SECRET) {
-      console.log('Unauthorized cron request');
-      // Still allow for testing, but log it
-    }
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const supabase = getSupabase();

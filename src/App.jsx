@@ -69,8 +69,6 @@ function App() {
     const savedToken = localStorage.getItem(TOKEN_KEY);
     if (savedToken) {
       setToken(savedToken);
-    } else if (import.meta.env.VITE_GITHUB_TOKEN) {
-      setToken(import.meta.env.VITE_GITHUB_TOKEN);
     }
   }, []);
 

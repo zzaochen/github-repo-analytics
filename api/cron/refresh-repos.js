@@ -457,7 +457,7 @@ export default async function handler(req, res) {
   // Verify cron request
   const authHeader = req.headers['authorization'];
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    console.log('Unauthorized cron request');
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const supabase = getSupabase();
