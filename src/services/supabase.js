@@ -388,7 +388,7 @@ export async function getAggregateStats(dateFilter = null) {
       return query
         .order('date', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
     });
 
     const results = await Promise.all(latestMetricsPromises);
@@ -1018,17 +1018,17 @@ export async function getLastCronRun(jobType = 'weekly') {
       .eq('job_name', jobName)
       .order('run_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // Fallback: check old job name format for weekly (before we added period suffix)
-    if (error && jobType === 'weekly') {
+    if (!data && jobType === 'weekly') {
       const fallback = await supabase
         .from('cron_logs')
         .select('*')
         .eq('job_name', 'check-trending')
         .order('run_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!fallback.error) {
         return fallback.data;
@@ -1198,7 +1198,7 @@ export async function getCurrentStarsForAllRepos() {
         .eq('repo_id', repo.id)
         .order('date', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
         .then(({ data }) => ({
           repoKey: `${repo.owner}/${repo.repo}`,
           stars: data?.total_stars || 0
