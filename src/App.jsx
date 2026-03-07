@@ -50,7 +50,7 @@ function App() {
   const [cacheKey, setCacheKey] = useState(0);
   const [starsPaginationLimited, setStarsPaginationLimited] = useState(false);
   const [companyInfo, setCompanyInfo] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [prTimelineOpen, setPrTimelineOpen] = useState(false);
   const [prTimelineKey, setPrTimelineKey] = useState(0);
