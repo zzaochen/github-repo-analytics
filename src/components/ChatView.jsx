@@ -131,16 +131,16 @@ function ChatView() {
       <div className="flex-1 overflow-y-auto p-4">
         {showSuggestions && (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
-            <p className="text-gray-500 mb-6">Try asking a question:</p>
-            <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+            <p className="text-gray-400 text-xs mb-4">Try asking a question:</p>
+            <div className="flex flex-wrap gap-1.5 justify-center max-w-lg">
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
                   key={q}
                   onClick={() => sendMessage(q)}
-                  className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition-colors border border-blue-200"
+                  className="px-2 py-1.5 bg-blue-50 text-blue-700 rounded-md text-xs hover:bg-blue-100 transition-colors border border-blue-200"
                 >
                   {q}
                 </button>
