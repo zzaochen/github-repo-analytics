@@ -180,21 +180,26 @@ function ChatView() {
       </div>
 
       {/* Input area */}
-      <div className="flex gap-2 p-4 border-t border-gray-200">
-        <input
+      <div className="flex gap-2 p-4 border-t border-gray-200 items-end">
+        <textarea
           ref={inputRef}
-          type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Ask about your repositories..."
           disabled={isLoading}
-          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50"
+          rows={1}
+          className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 resize-none overflow-y-auto"
+          style={{ maxHeight: '120px' }}
         />
         <button
           onClick={() => sendMessage(input)}
           disabled={isLoading || !input.trim()}
-          className="px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           Send
         </button>
