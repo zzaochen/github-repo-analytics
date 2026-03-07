@@ -288,7 +288,7 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'date'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -298,7 +298,7 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
             </button>
             <button
               onClick={() => setViewMode('indexed')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'indexed'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -604,11 +604,11 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
   if (comparisonData.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Stars / Contributors Ratio</h3>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm overflow-hidden mt-6">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">Stars / Contributors Ratio</h3>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
@@ -645,7 +645,7 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'date'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -655,7 +655,7 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
             </button>
             <button
               onClick={() => setViewMode('indexed')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'indexed'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -960,11 +960,11 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
   if (comparisonData.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Issues Opened / Closed Ratio</h3>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm overflow-hidden mt-6">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">Issues Opened / Closed Ratio</h3>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
@@ -1001,7 +1001,7 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'date'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -1011,7 +1011,7 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
             </button>
             <button
               onClick={() => setViewMode('indexed')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'indexed'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -1316,11 +1316,11 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
   if (comparisonData.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">PRs Opened / Closed Ratio</h3>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm overflow-hidden mt-6">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">PRs Opened / Closed Ratio</h3>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
@@ -1357,7 +1357,7 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'date'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -1367,7 +1367,7 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
             </button>
             <button
               onClick={() => setViewMode('indexed')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'indexed'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -1672,11 +1672,11 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
   if (comparisonData.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">PRs Opened / Merged Ratio</h3>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm overflow-hidden mt-6">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">PRs Opened / Merged Ratio</h3>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
@@ -1713,7 +1713,7 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'date'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -1723,7 +1723,7 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
             </button>
             <button
               onClick={() => setViewMode('indexed')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 viewMode === 'indexed'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
