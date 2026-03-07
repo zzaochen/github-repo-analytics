@@ -302,21 +302,21 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm overflow-hidden">
       {/* Header with controls */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex-shrink-0">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <h3 className="text-sm font-semibold text-gray-900 flex-shrink-0">
           {currentMetric?.label} MoM Growth
         </h3>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* Date Range Selection */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
                 key={preset.key}
                 onClick={() => setDatePreset(preset.key)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   datePreset === preset.key
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -345,10 +345,10 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
           )}
 
           {/* Time mode toggle (Date / Indexed) */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setTimeMode('date')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 timeMode === 'date'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -358,7 +358,7 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
             </button>
             <button
               onClick={() => setTimeMode('indexed')}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 timeMode === 'indexed'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -369,12 +369,12 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
           </div>
 
           {/* Value mode toggle (Growth % / Absolute) */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {VIEW_MODES.map(mode => (
               <button
                 key={mode.key}
                 onClick={() => setValueMode(mode.key)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   valueMode === mode.key
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -388,7 +388,7 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
       </div>
 
       {/* Chart */}
-      <div style={{ height: 400 }}>
+      <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData} key={`${datePreset}-${startDate}-${endDate}`}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -405,13 +405,14 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
               allowDataOverflow={true}
               tickCount={6}
               tickFormatter={formatYAxis}
-              tick={{ fill: '#6B7280', fontSize: 12 }}
+              tick={{ fill: '#6B7280', fontSize: 10 }}
             />
             <Tooltip
               contentStyle={{
                 backgroundColor: '#ffffff',
                 border: '1px solid #e5e7eb',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                fontSize: '11px'
               }}
               labelFormatter={(label) => {
                 if (timeMode === 'indexed') {
@@ -422,7 +423,7 @@ export default function MoMGrowthChart({ selectedRepos, repoData, selectedMetric
               }}
               formatter={(value, name) => [formatValue(value), name]}
             />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             <ReferenceLine y={0} stroke="#9CA3AF" strokeDasharray="3 3" />
             {selectedRepos.map((repoKey, index) => (
               <Line

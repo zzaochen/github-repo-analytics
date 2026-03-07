@@ -2386,20 +2386,20 @@ export default function CompareView() {
 
       {/* Comparison Chart */}
       {selectedRepos.length > 0 && comparisonData.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h3 className="text-sm font-semibold text-gray-900">
               {METRICS.find(m => m.key === selectedMetric)?.label} Comparison
             </h3>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {/* Date Range Selection */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
                 {DATE_PRESETS.map(preset => (
                   <button
                     key={preset.key}
                     onClick={() => setMetricsDatePreset(preset.key)}
-                    className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                       metricsDatePreset === preset.key
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
@@ -2428,10 +2428,10 @@ export default function CompareView() {
               )}
 
               {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
                 <button
                   onClick={() => setViewMode('date')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                     viewMode === 'date'
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
@@ -2441,7 +2441,7 @@ export default function CompareView() {
                 </button>
                 <button
                   onClick={() => setViewMode('indexed')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                     viewMode === 'indexed'
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
@@ -2453,7 +2453,7 @@ export default function CompareView() {
             </div>
           </div>
 
-          <div style={{ height: 400 }}>
+          <div style={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={comparisonData} key={`${metricsDatePreset}-${metricsStartDate}-${metricsEndDate}`}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -2470,13 +2470,14 @@ export default function CompareView() {
                   allowDataOverflow={true}
                   tickCount={6}
                   tickFormatter={formatNumber}
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
+                  tick={{ fill: '#6B7280', fontSize: 10 }}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    fontSize: '11px'
                   }}
                   labelFormatter={(label) => {
                     if (viewMode === 'indexed') {
@@ -2495,7 +2496,7 @@ export default function CompareView() {
                   }}
                   formatter={(value, name) => [formatNumber(value), name]}
                 />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
                 {selectedRepos.map((repoKey, index) => (
                   <Line
                     key={repoKey}
