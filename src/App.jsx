@@ -908,7 +908,7 @@ function App() {
                   <button
                     onClick={handleSignOut}
                     disabled={authLoading}
-                    className="text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                    className={`text-xs ${compact ? '' : 'lg:text-sm'} font-medium text-gray-600 hover:text-gray-900 transition-colors`}
                   >
                     Sign Out
                   </button>
