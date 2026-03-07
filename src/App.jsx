@@ -998,12 +998,12 @@ function App() {
         } transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}
       >
         <div className={`w-80 xl:w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 ${chatOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
-              <h2 className="text-lg font-semibold text-gray-800">AI Fetch</h2>
+              <h2 className="text-sm font-semibold text-gray-800">AI Fetch</h2>
             </div>
             <button
               onClick={() => setChatOpen(false)}
@@ -1028,12 +1028,12 @@ function App() {
         } transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}
       >
         <div className={`w-80 xl:w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 ${prTimelineOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-900" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-900" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
               </svg>
-              <h2 className="text-lg font-semibold text-gray-800">PR History</h2>
+              <h2 className="text-sm font-semibold text-gray-800">PR History</h2>
               <button
                 onClick={() => setPrTimelineKey(k => k + 1)}
                 className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
