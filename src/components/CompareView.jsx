@@ -245,18 +245,18 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
   if (comparisonData.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Stars / Forks Ratio</h3>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">Stars / Forks Ratio</h3>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* Date Range Selection */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
                 key={preset.key}
                 onClick={() => setDatePreset(preset.key)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   datePreset === preset.key
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -285,7 +285,7 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
           )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
               className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -310,7 +310,7 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
         </div>
       </div>
 
-      <div style={{ height: 400 }}>
+      <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -327,7 +327,7 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
               allowDataOverflow={true}
               tickCount={6}
               tickFormatter={formatRatio}
-              tick={{ fill: '#6B7280', fontSize: 12 }}
+              tick={{ fill: '#6B7280', fontSize: 10 }}
             />
             <Tooltip
               contentStyle={{
@@ -351,7 +351,7 @@ function StarsForksRatioChart({ selectedRepos, repoData }) {
               }}
               formatter={(value, name) => [formatRatio(value), name]}
             />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             {selectedRepos.map((repoKey, index) => (
               <Line
                 key={repoKey}
@@ -609,12 +609,12 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
         <h3 className="text-lg font-semibold text-gray-900">Stars / Contributors Ratio</h3>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
                 key={preset.key}
                 onClick={() => setDatePreset(preset.key)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   datePreset === preset.key
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -642,7 +642,7 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
             </div>
           )}
 
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
               className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -667,7 +667,7 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
         </div>
       </div>
 
-      <div style={{ height: 400 }}>
+      <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -683,7 +683,7 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
               domain={getYAxisDomain()}
               tickCount={6}
               tickFormatter={formatRatio}
-              tick={{ fill: '#6B7280', fontSize: 12 }}
+              tick={{ fill: '#6B7280', fontSize: 10 }}
             />
             <Tooltip
               contentStyle={{
@@ -707,7 +707,7 @@ function StarsContributorsRatioChart({ selectedRepos, repoData }) {
               }}
               formatter={(value, name) => [formatRatio(value), name]}
             />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             {selectedRepos.map((repoKey, index) => (
               <Line
                 key={repoKey}
@@ -965,12 +965,12 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
         <h3 className="text-lg font-semibold text-gray-900">Issues Opened / Closed Ratio</h3>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
                 key={preset.key}
                 onClick={() => setDatePreset(preset.key)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   datePreset === preset.key
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -998,7 +998,7 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
             </div>
           )}
 
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
               className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -1023,7 +1023,7 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
         </div>
       </div>
 
-      <div style={{ height: 400 }}>
+      <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -1039,7 +1039,7 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
               domain={getYAxisDomain()}
               tickCount={6}
               tickFormatter={formatRatio}
-              tick={{ fill: '#6B7280', fontSize: 12 }}
+              tick={{ fill: '#6B7280', fontSize: 10 }}
             />
             <Tooltip
               contentStyle={{
@@ -1063,7 +1063,7 @@ function IssuesRatioChart({ selectedRepos, repoData }) {
               }}
               formatter={(value, name) => [formatRatio(value), name]}
             />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             {selectedRepos.map((repoKey, index) => (
               <Line
                 key={repoKey}
@@ -1321,12 +1321,12 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
         <h3 className="text-lg font-semibold text-gray-900">PRs Opened / Closed Ratio</h3>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
                 key={preset.key}
                 onClick={() => setDatePreset(preset.key)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   datePreset === preset.key
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -1354,7 +1354,7 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
             </div>
           )}
 
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
               className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -1379,7 +1379,7 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
         </div>
       </div>
 
-      <div style={{ height: 400 }}>
+      <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -1395,7 +1395,7 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
               domain={getYAxisDomain()}
               tickCount={6}
               tickFormatter={formatRatio}
-              tick={{ fill: '#6B7280', fontSize: 12 }}
+              tick={{ fill: '#6B7280', fontSize: 10 }}
             />
             <Tooltip
               contentStyle={{
@@ -1419,7 +1419,7 @@ function PRsOpenedClosedRatioChart({ selectedRepos, repoData }) {
               }}
               formatter={(value, name) => [formatRatio(value), name]}
             />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             {selectedRepos.map((repoKey, index) => (
               <Line
                 key={repoKey}
@@ -1677,12 +1677,12 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
         <h3 className="text-lg font-semibold text-gray-900">PRs Opened / Merged Ratio</h3>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             {DATE_PRESETS.map(preset => (
               <button
                 key={preset.key}
                 onClick={() => setDatePreset(preset.key)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
                   datePreset === preset.key
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -1710,7 +1710,7 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
             </div>
           )}
 
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
             <button
               onClick={() => setViewMode('date')}
               className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -1735,7 +1735,7 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
         </div>
       </div>
 
-      <div style={{ height: 400 }}>
+      <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={comparisonData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -1751,7 +1751,7 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
               domain={getYAxisDomain()}
               tickCount={6}
               tickFormatter={formatRatio}
-              tick={{ fill: '#6B7280', fontSize: 12 }}
+              tick={{ fill: '#6B7280', fontSize: 10 }}
             />
             <Tooltip
               contentStyle={{
@@ -1775,7 +1775,7 @@ function PRsOpenedMergedRatioChart({ selectedRepos, repoData }) {
               }}
               formatter={(value, name) => [formatRatio(value), name]}
             />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
             {selectedRepos.map((repoKey, index) => (
               <Line
                 key={repoKey}
