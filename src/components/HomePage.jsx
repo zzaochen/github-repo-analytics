@@ -584,12 +584,6 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                           <span className="text-xs text-gray-600">Total Repos Cached</span>
                           <span className="text-xs font-bold text-gray-900">{aggregateStats.totalRepos.toLocaleString('en-US')}</span>
                         </div>
-                        {aggregateStats.reposWithData !== undefined && aggregateStats.reposWithData !== aggregateStats.totalRepos && (
-                          <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                            <span className="text-xs text-gray-600">Repos with Data in Range</span>
-                            <span className="text-xs font-bold text-gray-900">{aggregateStats.reposWithData.toLocaleString('en-US')}</span>
-                          </div>
-                        )}
                         <div className="flex justify-between items-center py-1 border-b border-gray-100">
                           <span className="text-xs text-gray-600">Total Stars</span>
                           <span className="text-xs font-bold text-gray-900">{aggregateStats.totalStars.toLocaleString('en-US')}</span>
