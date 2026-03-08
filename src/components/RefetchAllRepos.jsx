@@ -204,7 +204,7 @@ export default function RefetchAllRepos({ token, user, onComplete }) {
       </div>
 
       <p className="text-xs text-gray-500 mb-3">
-        Delete all metrics and re-fetch every cached repo from scratch. Fixes contributor count drift.
+        Delete all metrics and re-fetch every cached repo from scratch.
       </p>
 
       {/* Confirmation dialog */}
@@ -235,20 +235,12 @@ export default function RefetchAllRepos({ token, user, onComplete }) {
 
       {/* Action buttons */}
       {!showConfirm && (
-        <div className="flex gap-2 justify-end">
-          {isComplete && (
-            <button
-              onClick={handleClear}
-              className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs transition-colors"
-            >
-              Clear
-            </button>
-          )}
+        <div>
           {!isFetching ? (
             <button
               onClick={handleClick}
               disabled={!user || isFetching}
-              className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs transition-colors"
+              className="w-full px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
               title={user ? 'Re-fetch all cached repositories' : 'Sign in first'}
             >
               Re-fetch All
@@ -256,9 +248,17 @@ export default function RefetchAllRepos({ token, user, onComplete }) {
           ) : (
             <button
               onClick={handleCancel}
-              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors"
+              className="w-full px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
             >
               Abort
+            </button>
+          )}
+          {isComplete && (
+            <button
+              onClick={handleClear}
+              className="w-full mt-2 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors"
+            >
+              Clear
             </button>
           )}
         </div>
