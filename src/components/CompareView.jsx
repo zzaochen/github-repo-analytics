@@ -1886,32 +1886,36 @@ export default function CompareView() {
 
       if (needsDaily || needsMonthly) {
         setLoadingData(true);
+        try {
+          const promises = [];
 
-        const promises = [];
+          if (needsDaily) {
+            promises.push(
+              getRepoFromCache(repo.owner, repo.repo).then(cached => {
+                if (cached && cached.metrics.length > 0) {
+                  const transformed = transformCachedMetrics(cached.metrics);
+                  setRepoData(prev => ({ ...prev, [repoKey]: transformed }));
+                }
+              })
+            );
+          }
 
-        if (needsDaily) {
-          promises.push(
-            getRepoFromCache(repo.owner, repo.repo).then(cached => {
-              if (cached && cached.metrics.length > 0) {
-                const transformed = transformCachedMetrics(cached.metrics);
-                setRepoData(prev => ({ ...prev, [repoKey]: transformed }));
-              }
-            })
-          );
+          if (needsMonthly) {
+            promises.push(
+              getMonthlyMetricsForRepos([repoKey]).then(monthlyResult => {
+                if (monthlyResult[repoKey]) {
+                  setMonthlyData(prev => ({ ...prev, [repoKey]: monthlyResult[repoKey] }));
+                }
+              })
+            );
+          }
+
+          await Promise.all(promises);
+        } catch (error) {
+          console.error(`Failed to load comparison data for ${repoKey}:`, error);
+        } finally {
+          setLoadingData(false);
         }
-
-        if (needsMonthly) {
-          promises.push(
-            getMonthlyMetricsForRepos([repoKey]).then(monthlyResult => {
-              if (monthlyResult[repoKey]) {
-                setMonthlyData(prev => ({ ...prev, [repoKey]: monthlyResult[repoKey] }));
-              }
-            })
-          );
-        }
-
-        await Promise.all(promises);
-        setLoadingData(false);
       }
     }
   };

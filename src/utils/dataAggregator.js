@@ -30,7 +30,9 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
   let totalPRsClosed = lastMetric?.totalPRsClosed || 0;
   let totalPRsMerged = lastMetric?.totalPRsMerged || 0;
 
-  // Track seen contributors from existing data
+  // We only have cumulative contributor counts in cached metrics (not identities),
+  // so re-counting "new contributors" from incremental commits can double-count
+  // existing authors on repeated refreshes. Preserve the prior total to avoid drift.
   const seenContributors = new Set();
 
   // Create a map for days starting from sinceDate (use UTC to avoid timezone issues)
@@ -115,7 +117,6 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
       dayMap.get(dateKey).commitsAdded++;
       if (c.author && !seenContributors.has(c.author)) {
         seenContributors.add(c.author);
-        dayMap.get(dateKey).newContributors.add(c.author);
       }
     }
   });
@@ -128,7 +129,9 @@ export function aggregateIncrementalToDaily(existingMetrics, sinceDate, stargaze
   const newMetrics = sortedDays.map(day => {
     totalStars += day.starsAdded;
     totalForks += day.forksAdded;
-    totalContributors += day.newContributors.size;
+    // Keep contributor count stable during incremental updates to prevent
+    // cumulative inflation from re-counting previously seen contributors.
+    totalContributors += 0;
     totalCommits += day.commitsAdded;
     totalIssuesOpened += day.issuesOpened;
     totalIssuesClosed += day.issuesClosed;

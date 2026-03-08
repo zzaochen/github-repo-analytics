@@ -403,7 +403,8 @@ function App() {
       };
 
       // Check if any metric is still limited
-      const anyLimited = starsResult.hitPaginationLimit || forksResult.hitPaginationLimit ||
+      const anyLimited = starsResult.hasMorePages || starsResult.hitRateLimit ||
+                         forksResult.hitPaginationLimit ||
                          prsResult.hitPaginationLimit || issuesResult.hitPaginationLimit ||
                          commitsResult.hitPaginationLimit;
 

@@ -34,7 +34,9 @@ export default async function handler(req, res) {
   try {
     const octokit = new Octokit({ auth: githubToken || undefined });
 
-    // If `before` is provided, fetch PRs merged before that date (pagination)
+    // Cursor value for pagination.
+    // We paginate the underlying API by `updated` sort, so cursor must also
+    // use `updated_at` to avoid unstable pages when loading more.
     const beforeDate = before ? new Date(before) : null;
 
     // Fetch merged PRs — paginate until we have enough
@@ -43,7 +45,8 @@ export default async function handler(req, res) {
     const perPage = 100;
     let reachedEnd = false;
 
-    while (mergedPRs.length < 50) {
+    const maxPages = 50;
+    while (mergedPRs.length < 50 && page <= maxPages) {
       const { data: prs } = await octokit.pulls.list({
         owner,
         repo,
@@ -61,14 +64,13 @@ export default async function handler(req, res) {
 
       for (const pr of prs) {
         if (!pr.merged_at) continue;
-        // Skip PRs that are newer than our "before" cursor
-        if (beforeDate && new Date(pr.merged_at) >= beforeDate) continue;
+        // Skip PRs newer than the current `updated_at` cursor
+        if (beforeDate && new Date(pr.updated_at) >= beforeDate) continue;
         mergedPRs.push(pr);
         if (mergedPRs.length >= 50) break;
       }
 
       page++;
-      if (page > 10) break; // Safety cap
     }
 
     if (mergedPRs.length === 0) {
@@ -159,9 +161,10 @@ ${prDescriptions}`,
     // Sort most recent first
     timeline.sort((a, b) => new Date(b.mergedAt) - new Date(a.mergedAt));
 
-    // Determine the oldest merged date for cursor-based pagination
-    const oldestMergedAt = timeline.length > 0 ? timeline[timeline.length - 1].mergedAt : null;
-    const hasMore = mergedPRs.length >= 50 && !reachedEnd;
+    // Cursor for next page: oldest updated timestamp in this batch.
+    const oldestMergedAt = mergedPRs.length > 0 ? mergedPRs[mergedPRs.length - 1].updated_at : null;
+    const hitSafetyCap = page > maxPages && !reachedEnd;
+    const hasMore = (mergedPRs.length >= 50 || hitSafetyCap) && !reachedEnd;
 
     return res.status(200).json({
       timeline,

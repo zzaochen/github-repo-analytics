@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 function formatDate(isoString) {
   if (!isoString) return '';
@@ -89,7 +89,7 @@ export default function PRTimeline({ repoName, token }) {
   const [overallSummary, setOverallSummary] = useState('');
   const [oldestDate, setOldestDate] = useState(null);
 
-  const fetchTimeline = async (before = null) => {
+  const fetchTimeline = useCallback(async (before = null) => {
     if (!repoName) return;
 
     const [owner, repo] = repoName.split('/');
@@ -131,13 +131,13 @@ export default function PRTimeline({ repoName, token }) {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [repoName, token]);
 
   useEffect(() => {
     if (repoName) {
       fetchTimeline();
     }
-  }, [repoName]);
+  }, [fetchTimeline, repoName]);
 
   if (!repoName) {
     return (
