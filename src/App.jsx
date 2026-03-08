@@ -11,6 +11,7 @@ import ChatView from './components/ChatView';
 import PRTimeline from './components/PRTimeline';
 import HomePage from './components/HomePage';
 import BatchFetch from './components/BatchFetch';
+import RefetchAllRepos from './components/RefetchAllRepos';
 import RateLimitStatus from './components/RateLimitStatus';
 import {
   createGitHubClient,
@@ -760,6 +761,11 @@ function App() {
             <>
               <div className="flex-1 overflow-y-auto">
                 <BatchFetch
+                  token={token}
+                  user={user}
+                  onComplete={() => setCacheKey(k => k + 1)}
+                />
+                <RefetchAllRepos
                   token={token}
                   user={user}
                   onComplete={() => setCacheKey(k => k + 1)}

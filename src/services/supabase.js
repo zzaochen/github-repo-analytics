@@ -296,6 +296,71 @@ export function transformCachedMetrics(metrics) {
   }));
 }
 
+export async function clearMetricsForRepo(owner, repo) {
+  if (!supabase) return { success: false, error: 'Supabase not configured' };
+
+  try {
+    // Look up repo ID
+    const { data: repoData, error: repoError } = await supabase
+      .from('repositories')
+      .select('id')
+      .eq('owner', owner)
+      .eq('repo', repo)
+      .single();
+
+    if (repoError || !repoData) {
+      return { success: false, error: repoError?.message || 'Repository not found' };
+    }
+
+    // Delete daily_metrics
+    const { error: dailyError } = await supabase
+      .from('daily_metrics')
+      .delete()
+      .eq('repo_id', repoData.id);
+
+    if (dailyError) {
+      console.error('Error deleting daily_metrics:', dailyError);
+      return { success: false, error: dailyError.message };
+    }
+
+    // Delete monthly_metrics
+    const { error: monthlyError } = await supabase
+      .from('monthly_metrics')
+      .delete()
+      .eq('repo_id', repoData.id);
+
+    if (monthlyError) {
+      console.error('Error deleting monthly_metrics:', monthlyError);
+    }
+
+    // Reset fetch state columns on the repository record
+    const { error: updateError } = await supabase
+      .from('repositories')
+      .update({
+        stars_cursor: null,
+        stars_last_page: null,
+        stars_pagination_limited: null,
+        forks_last_page: null,
+        forks_pagination_limited: null,
+        prs_last_page: null,
+        prs_pagination_limited: null,
+        issues_last_date: null,
+        commits_last_date: null
+      })
+      .eq('id', repoData.id);
+
+    if (updateError) {
+      console.error('Error resetting fetch state:', updateError);
+      return { success: false, error: updateError.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error clearing metrics for repo:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getCachedRepos() {
   if (!supabase) return [];
 
