@@ -111,13 +111,13 @@ export default async function handler(req, res) {
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [
         {
           role: 'user',
           content: `Given these merged pull requests for the ${owner}/${repo} repository, return a JSON object with two fields:
-1. "prs": an array of objects with "number" and "summary" fields. Each summary should be one sentence (max 20 words) written in plain, non-technical language that anyone can understand. Focus on the real-world impact on the project — what changed for users, what got better/faster/fixed, or what new capability was added. Avoid jargon like "refactor", "middleware", "API", "module", "dependency", "config" etc. Instead describe what the change actually does in human terms.
-2. "overallSummary": a 2-3 sentence plain-text summary of the overall impact and direction of the project based on these PRs, written for a non-technical audience.
+1. "prs": an array of objects with "number" and "summary" fields. Each summary should be 1-2 sentences (max 30 words) that specifically describe what was changed and why. Be concrete — mention the feature, page, or behavior affected. For example: "Added a search bar to the settings page so users can find options faster" or "Fixed a bug where login would fail after password reset." Avoid vague statements like "improved performance" or "updated code" — say what specifically got faster or what code was changed and why.
+2. "overallSummary": a 2-3 sentence summary of the overall themes and direction of recent development, mentioning specific features or areas of the project being worked on.
 
 Only return the JSON object, nothing else.
 

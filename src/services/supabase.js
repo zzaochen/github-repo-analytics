@@ -725,7 +725,7 @@ export async function getMonthlyMetricsForRepos(repoKeys) {
   try {
     const result = {};
 
-    for (const repoKey of repoKeys) {
+    const promises = repoKeys.map(async (repoKey) => {
       const [owner, repo] = repoKey.split('/');
 
       // Get repo ID
@@ -736,7 +736,7 @@ export async function getMonthlyMetricsForRepos(repoKeys) {
         .eq('repo', repo)
         .single();
 
-      if (repoError || !repoData) continue;
+      if (repoError || !repoData) return;
 
       // Get monthly metrics
       const { data, error } = await supabase
@@ -748,7 +748,9 @@ export async function getMonthlyMetricsForRepos(repoKeys) {
       if (!error && data) {
         result[repoKey] = transformMonthlyMetrics(data);
       }
-    }
+    });
+
+    await Promise.all(promises);
 
     return result;
   } catch (error) {
