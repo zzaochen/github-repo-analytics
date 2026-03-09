@@ -33,7 +33,7 @@ function setCache(data) {
   } catch {}
 }
 
-export default function HomePage({ onRepoSelect, onOpenSidebar }) {
+export default function HomePage({ onRepoSelect, onOpenSidebar, bothSidebarsOpen }) {
   const navigate = useNavigate();
   const [trendingData, setTrendingData] = useState({
     daily: { repos: [], loading: true, error: null },
@@ -374,9 +374,9 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                       <tr className="text-left text-gray-500 text-xs">
                         <th className="pb-2 font-medium w-6">#</th>
                         <th className="pb-2 font-medium">Repository</th>
-                        <th className="pb-2 font-medium text-right w-14">Stars</th>
+                        {!bothSidebarsOpen && <th className="pb-2 font-medium text-right w-14">Stars</th>}
                         <th className="pb-2 font-medium text-right w-14">New</th>
-                        <th className="pb-2 font-medium text-right w-14">%</th>
+                        {!bothSidebarsOpen && <th className="pb-2 font-medium text-right w-14">%</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -394,13 +394,15 @@ export default function HomePage({ onRepoSelect, onOpenSidebar }) {
                               {repo.fullName}
                             </a>
                           </td>
-                          <td className="py-1.5 text-right text-gray-600">{formatNumber(repo.stars)}</td>
+                          {!bothSidebarsOpen && <td className="py-1.5 text-right text-gray-600">{formatNumber(repo.stars)}</td>}
                           <td className="py-1.5 text-right text-green-600 font-medium">+{formatNumber(repo.starsGained)}</td>
-                          <td className="py-1.5 text-right text-green-600 font-medium">
-                            {repo.stars > repo.starsGained
-                              ? `+${Math.round((repo.starsGained / (repo.stars - repo.starsGained)) * 100).toLocaleString('en-US')}%`
-                              : 'New'}
-                          </td>
+                          {!bothSidebarsOpen && (
+                            <td className="py-1.5 text-right text-green-600 font-medium">
+                              {repo.stars > repo.starsGained
+                                ? `+${Math.round((repo.starsGained / (repo.stars - repo.starsGained)) * 100).toLocaleString('en-US')}%`
+                                : 'New'}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

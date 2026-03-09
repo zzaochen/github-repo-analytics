@@ -852,7 +852,7 @@ function App() {
                 {!compact && <span className="hidden xl:inline">GitHub Repository Analytics</span>}
               </Link>
             </div>
-            <nav className={`flex items-center ${compact ? 'gap-1.5' : 'gap-1.5 lg:gap-3'} min-w-0`}>
+            <nav className={`flex items-center ${compact ? 'gap-3' : 'gap-3 lg:gap-5'} min-w-0`}>
               <Link
                 to="/lookup"
                 className={`text-xs ${compact ? '' : 'lg:text-sm'} font-medium transition-colors whitespace-nowrap ${
@@ -943,7 +943,7 @@ function App() {
         <div className={`${sidebarOpen && compact ? 'max-w-5xl' : sidebarOpen || compact ? 'max-w-7xl' : 'max-w-[1600px]'} mx-auto ${compact ? 'px-4 py-4' : 'px-4 lg:px-8 py-4 lg:py-8'}`}>
           <Routes>
             {/* Home - Trending Overview */}
-            <Route path="/" element={<HomePage onRepoSelect={handleCachedRepoSelect} onOpenSidebar={() => setSidebarOpen(true)} />} />
+            <Route path="/" element={<HomePage onRepoSelect={handleCachedRepoSelect} onOpenSidebar={() => setSidebarOpen(true)} bothSidebarsOpen={sidebarOpen && compact} />} />
 
             {/* Repo Lookup View */}
             <Route path="/lookup" element={

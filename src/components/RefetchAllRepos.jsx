@@ -192,7 +192,7 @@ export default function RefetchAllRepos({ token, user, onComplete }) {
   const isComplete = !isFetching && totalCount > 0 && completedCount + errorCount === totalCount;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-700">Re-Fetch All Repos</h3>
         {isFetching && (
