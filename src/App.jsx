@@ -826,7 +826,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
         {/* Top Navigation Bar */}
-        <div className="bg-white border-b border-gray-200 px-3 h-10 flex items-center shrink-0 sticky top-0 z-30">
+        <div className="bg-white border-b border-gray-200 px-3 h-10 flex items-center shrink-0 fixed top-0 left-0 right-0 z-30">
           <div className="flex items-center justify-between w-full gap-2">
             {/* Left section: hamburger menu and title */}
             <div className="flex items-center gap-2 shrink-0">
@@ -940,7 +940,7 @@ function App() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto mt-10">
         <div className={`${sidebarOpen && compact ? 'max-w-5xl' : sidebarOpen || compact ? 'max-w-7xl' : 'max-w-[1600px]'} mx-auto ${compact ? 'px-4 py-4' : 'px-4 lg:px-8 py-4 lg:py-8'}`}>
           <Routes>
             {/* Home - Trending Overview */}
