@@ -39,14 +39,14 @@ export default function ExportButton({ data, repoName }) {
               onClick={() => handleExport('csv')}
               className="w-full px-4 py-2 text-left hover:bg-gray-100 transition-colors flex items-center gap-2"
             >
-              <span className="text-green-600 font-mono text-sm">CSV</span>
+              <span className="text-green-600 font-medium text-sm">CSV</span>
               <span className="text-gray-500 text-sm">(.csv)</span>
             </button>
             <button
               onClick={() => handleExport('xlsx')}
               className="w-full px-4 py-2 text-left hover:bg-gray-100 transition-colors flex items-center gap-2"
             >
-              <span className="text-blue-600 font-mono text-sm">Excel</span>
+              <span className="text-blue-600 font-medium text-sm">Excel</span>
               <span className="text-gray-500 text-sm">(.xlsx)</span>
             </button>
           </div>
