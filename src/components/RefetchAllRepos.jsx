@@ -194,7 +194,7 @@ export default function RefetchAllRepos({ token, user, onComplete }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-700">Re-Fetch All Repos</h3>
+        <h3 className="text-sm font-medium text-gray-700">Reset Metrics</h3>
         {isFetching && (
           <span className="text-xs text-blue-600">{completedCount + errorCount}/{totalCount}</span>
         )}
@@ -227,7 +227,7 @@ export default function RefetchAllRepos({ token, user, onComplete }) {
               onClick={handleConfirm}
               className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs transition-colors"
             >
-              Confirm Re-Fetch
+              Confirm Reset
             </button>
           </div>
         </div>
@@ -240,10 +240,10 @@ export default function RefetchAllRepos({ token, user, onComplete }) {
             <button
               onClick={handleClick}
               disabled={!user || isFetching}
-              className="w-full px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-              title={user ? 'Re-Fetch all cached repositories' : 'Sign in first'}
+              className="w-full px-3 py-2 bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+              title={user ? 'Reset and re-fetch all cached repositories' : 'Sign in first'}
             >
-              Re-Fetch All
+              Reset Metrics
             </button>
           ) : (
             <button
