@@ -826,7 +826,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
         {/* Top Navigation Bar */}
-        <div className={`bg-white border-b border-gray-200 px-3 h-10 flex items-center shrink-0 fixed top-0 z-30 transition-all duration-300 ${sidebarOpen ? 'left-64 xl:left-80' : 'left-0'} ${compact ? 'right-80 xl:right-96' : 'right-0'}`}
+        <div className={`bg-white border-b border-gray-200 px-3 h-10 flex items-center shrink-0 fixed top-0 z-30 transition-all duration-300 ${sidebarOpen ? 'left-64 xl:left-80' : 'left-0'} ${compact ? 'right-80 xl:right-96' : 'right-0'}`}>
           <div className="flex items-center justify-between w-full gap-2">
             {/* Left section: hamburger menu and title */}
             <div className="flex items-center gap-2 shrink-0">
