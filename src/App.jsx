@@ -720,7 +720,7 @@ function App() {
           sidebarOpen ? 'w-64 xl:w-80' : 'w-0'
         } transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}
       >
-        <div className={`w-64 xl:w-80 h-screen bg-white border-r border-gray-200 p-3 xl:p-4 fixed flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className={`w-64 xl:w-80 h-screen bg-white border-r border-gray-200 p-3 xl:p-4 fixed flex flex-col transition-transform duration-300 z-40 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
@@ -1010,7 +1010,7 @@ function App() {
           chatOpen ? 'w-80 xl:w-96' : 'w-0'
         } transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}
       >
-        <div className={`w-80 xl:w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 ${chatOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`w-80 xl:w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 z-40 ${chatOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between px-3 h-10 border-b border-gray-200">
             <div className="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1040,7 +1040,7 @@ function App() {
           prTimelineOpen ? 'w-80 xl:w-96' : 'w-0'
         } transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}
       >
-        <div className={`w-80 xl:w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 ${prTimelineOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`w-80 xl:w-96 h-screen bg-white border-l border-gray-200 fixed right-0 top-0 flex flex-col transition-transform duration-300 z-40 ${prTimelineOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between px-3 h-10 border-b border-gray-200">
             <div className="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-900" viewBox="0 0 20 20" fill="currentColor">
