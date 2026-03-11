@@ -338,17 +338,17 @@ export default function HomePage({ onRepoSelect, onOpenSidebar, bothSidebarsOpen
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 lg:grid-cols-3 ${bothSidebarsOpen ? 'gap-3' : 'gap-6'}`}>
         {PERIODS.map(({ key, label }) => {
           const { repos, loading, error } = trendingData[key];
 
           return (
             <div key={key} className="bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                <h3 className="font-semibold text-gray-900">{label}</h3>
+              <div className={`${bothSidebarsOpen ? 'px-2 py-2' : 'px-4 py-3'} border-b border-gray-200 bg-gray-50 rounded-t-lg`}>
+                <h3 className={`${bothSidebarsOpen ? 'text-xs' : 'text-base'} font-semibold text-gray-900`}>{label}</h3>
               </div>
 
-              <div className="p-4 max-h-[600px] overflow-y-auto">
+              <div className={`${bothSidebarsOpen ? 'p-2' : 'p-4'} max-h-[600px] overflow-y-auto`}>
                 {loading && (
                   <div className="flex items-center justify-center py-8">
                     <svg className="w-6 h-6 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -384,20 +384,20 @@ export default function HomePage({ onRepoSelect, onOpenSidebar, bothSidebarsOpen
                     <tbody>
                       {getSortedRepos(repos).slice(0, 15).map((repo, index) => (
                         <tr key={repo.fullName} className="border-t border-gray-100">
-                          <td className="py-1.5 text-gray-400">{index + 1}</td>
-                          <td className="py-1.5">
+                          <td className={`${bothSidebarsOpen ? 'py-1' : 'py-1.5'} text-gray-400`}>{index + 1}</td>
+                          <td className={`${bothSidebarsOpen ? 'py-1' : 'py-1.5'}`}>
                             <a
                               href={`https://github.com/${repo.fullName}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline truncate block max-w-[180px]"
+                              className={`text-blue-600 hover:underline truncate block ${bothSidebarsOpen ? 'max-w-[120px]' : 'max-w-[180px]'}`}
                               title={repo.fullName}
                             >
                               {repo.fullName}
                             </a>
                           </td>
                           {!bothSidebarsOpen && <td className="py-1.5 text-right text-gray-600">{formatNumber(repo.stars)}</td>}
-                          <td className="py-1.5 text-right text-green-600 font-medium">+{formatNumber(repo.starsGained)}</td>
+                          <td className={`${bothSidebarsOpen ? 'py-1' : 'py-1.5'} text-right text-green-600 font-medium`}>+{formatNumber(repo.starsGained)}</td>
                           {!bothSidebarsOpen && (
                             <td className="py-1.5 text-right text-green-600 font-medium">
                               {repo.stars > repo.starsGained
